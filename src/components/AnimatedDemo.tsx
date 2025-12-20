@@ -64,7 +64,7 @@ export default function AnimatedDemo() {
     }, [])
 
     return (
-        <div className="relative max-w-2xl mx-auto">
+        <div className="relative w-full max-w-2xl mx-auto px-2 sm:px-0">
             {/* Glow effect animado */}
             <div className={`absolute -inset-4 rounded-3xl blur-2xl transition-all duration-1000 ${phase === 'result'
                 ? scenario.isPrejuizo
@@ -92,37 +92,37 @@ export default function AnimatedDemo() {
                     </div>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                     {/* Produto */}
-                    <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                        <label className="text-xs text-gray-500 uppercase tracking-wider block mb-2">Produto Analisado</label>
-                        <div className="text-2xl font-bold text-white">{scenario.produto}</div>
+                    <div className="bg-white/5 rounded-xl p-3 sm:p-4 border border-white/5">
+                        <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1 sm:mb-2">Produto Analisado</label>
+                        <div className="text-lg sm:text-2xl font-bold text-white">{scenario.produto}</div>
                     </div>
 
                     {/* Cards de Custo e Preço - SEMPRE VISÍVEIS */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl p-4 border border-orange-500/20">
-                            <label className="text-xs text-orange-400 uppercase tracking-wider block mb-2">💰 Custo</label>
-                            <div className="text-3xl font-black text-white">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl p-3 sm:p-4 border border-orange-500/20">
+                            <label className="text-[10px] sm:text-xs text-orange-400 uppercase tracking-wider block mb-1 sm:mb-2">💰 Custo</label>
+                            <div className="text-xl sm:text-3xl font-black text-white">
                                 R$ {scenario.custo.toFixed(2)}
                             </div>
                         </div>
-                        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl p-4 border border-cyan-500/20">
-                            <label className="text-xs text-cyan-400 uppercase tracking-wider block mb-2">🏷️ Preço de Venda</label>
-                            <div className="text-3xl font-black text-white">
+                        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl p-3 sm:p-4 border border-cyan-500/20">
+                            <label className="text-[10px] sm:text-xs text-cyan-400 uppercase tracking-wider block mb-1 sm:mb-2">🏷️ Preço</label>
+                            <div className="text-xl sm:text-3xl font-black text-white">
                                 R$ {scenario.preco.toFixed(2)}
                             </div>
                         </div>
                     </div>
 
-                    {/* PROCESSING STATE - Spinner sempre visível (some só quando resultado aparece) */}
+                    {/* PROCESSING STATE - Spinner sempre visível */}
                     {phase !== 'result' && (
-                        <div className="bg-gradient-to-r from-purple-500/20 via-cyan-500/20 to-purple-500/20 rounded-xl p-6 border border-cyan-500/30 animate-pulse">
-                            <div className="flex items-center justify-center gap-4">
-                                <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+                        <div className="bg-gradient-to-r from-purple-500/20 via-cyan-500/20 to-purple-500/20 rounded-xl p-4 sm:p-6 border border-cyan-500/30 animate-pulse">
+                            <div className="flex items-center justify-center gap-3 sm:gap-4">
+                                <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-400 animate-spin" />
                                 <div>
-                                    <p className="text-xl font-bold text-white">Processando...</p>
-                                    <p className="text-sm text-cyan-400">A I.A. está analisando seus dados</p>
+                                    <p className="text-lg sm:text-xl font-bold text-white">Processando...</p>
+                                    <p className="text-xs sm:text-sm text-cyan-400">A I.A. está analisando</p>
                                 </div>
                             </div>
                         </div>
@@ -132,39 +132,39 @@ export default function AnimatedDemo() {
                     {phase === 'result' && (
                         <>
                             {/* Alerta Principal */}
-                            <div className={`relative rounded-xl p-5 overflow-hidden ${scenario.isPrejuizo
+                            <div className={`relative rounded-xl p-3 sm:p-5 overflow-hidden ${scenario.isPrejuizo
                                 ? 'bg-gradient-to-r from-red-900/50 to-red-800/30 border-2 border-red-500'
                                 : 'bg-gradient-to-r from-green-900/50 to-green-800/30 border-2 border-green-500'
                                 }`}>
                                 {/* Efeito de brilho */}
                                 <div className={`absolute inset-0 ${scenario.isPrejuizo ? 'bg-red-500/10' : 'bg-green-500/10'} animate-pulse`}></div>
 
-                                <div className="relative flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${scenario.isPrejuizo
+                                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center flex-shrink-0 ${scenario.isPrejuizo
                                             ? 'bg-red-500 shadow-lg shadow-red-500/50'
                                             : 'bg-green-500 shadow-lg shadow-green-500/50'
                                             }`}>
                                             {scenario.isPrejuizo ? (
-                                                <AlertTriangle className="w-7 h-7 text-white" />
+                                                <AlertTriangle className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                                             ) : (
-                                                <CheckCircle className="w-7 h-7 text-white" />
+                                                <CheckCircle className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                                             )}
                                         </div>
                                         <div>
-                                            <p className={`text-2xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
-                                                {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO SAUDÁVEL!'}
+                                            <p className={`text-base sm:text-2xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                                {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO!'}
                                             </p>
-                                            <p className={`text-sm ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
-                                                {scenario.isPrejuizo ? 'Você está PAGANDO para vender!' : 'Sua margem está excelente!'}
+                                            <p className={`text-xs sm:text-sm ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
+                                                {scenario.isPrejuizo ? 'Pagando para vender!' : 'Margem excelente!'}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className={`text-4xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                        <p className={`text-2xl sm:text-4xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
                                             {scenario.margem > 0 ? '+' : ''}{scenario.margem.toFixed(1)}%
                                         </p>
-                                        <p className="text-base text-gray-400">
+                                        <p className="text-xs sm:text-base text-gray-400">
                                             {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)}/un
                                         </p>
                                     </div>
@@ -174,15 +174,15 @@ export default function AnimatedDemo() {
                             {/* Resposta da I.A. */}
                             <div className="relative">
                                 <div className="absolute -inset-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-xl opacity-75 animate-pulse"></div>
-                                <div className="relative bg-[#111] rounded-xl p-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                            <Bot className="w-4 h-4 text-white" />
+                                <div className="relative bg-[#111] rounded-xl p-3 sm:p-4">
+                                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                            <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                         </div>
-                                        <span className="text-sm font-bold text-purple-400">Consultor I.A.</span>
-                                        <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+                                        <span className="text-xs sm:text-sm font-bold text-purple-400">Consultor I.A.</span>
+                                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 animate-pulse" />
                                     </div>
-                                    <p className="text-white text-base leading-relaxed">{scenario.aiResponse}</p>
+                                    <p className="text-white text-sm sm:text-base leading-relaxed">{scenario.aiResponse}</p>
                                 </div>
                             </div>
                         </>
