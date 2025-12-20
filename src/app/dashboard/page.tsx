@@ -6,7 +6,7 @@ import { calculateProfit, formatCurrency, formatPercentage, type ProductData } f
 import {
     Zap, LogOut, Calculator, Bot, History, Loader2,
     TrendingUp, TrendingDown, AlertTriangle, Sparkles,
-    ChevronRight, Trash2, Shield, Settings
+    ChevronRight, Trash2, Shield, Settings, CheckCircle
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -265,57 +265,115 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Results Card */}
-                        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${result.isPrejuizo ? 'bg-[#ff3355]/10' : 'bg-[#00ff88]/10'
-                                    }`}>
-                                    {result.isPrejuizo ? (
-                                        <TrendingDown className="w-5 h-5 text-[#ff3355]" />
-                                    ) : (
-                                        <TrendingUp className="w-5 h-5 text-[#00ff88]" />
+                        {/* Results Card - Matching Demo Style */}
+                        <div className="relative">
+                            {/* Glow effect */}
+                            <div className={`absolute -inset-2 rounded-3xl blur-xl transition-all duration-500 ${result.isPrejuizo
+                                    ? 'bg-red-500/30'
+                                    : result.lucroLiquido > 0
+                                        ? 'bg-green-500/30'
+                                        : 'bg-white/5'
+                                }`}></div>
+
+                            <div className="relative bg-[#0d0d0d] rounded-2xl border border-white/10 overflow-hidden">
+                                {/* Header */}
+                                <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-[#111] to-[#0a0a0a]">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${result.isPrejuizo
+                                                    ? 'bg-red-500 shadow-red-500/20'
+                                                    : 'bg-gradient-to-br from-[#00ff88] to-[#00d4ff] shadow-green-500/20'
+                                                }`}>
+                                                {result.isPrejuizo ? (
+                                                    <TrendingDown className="w-5 h-5 text-white" />
+                                                ) : (
+                                                    <TrendingUp className="w-5 h-5 text-black" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <span className="text-base font-bold text-white">Resultado</span>
+                                                <span className="text-base font-bold text-[#00ff88]"> em Tempo Real</span>
+                                            </div>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full ${result.isPrejuizo
+                                                ? 'bg-red-500/20 border border-red-500/30'
+                                                : 'bg-green-500/20 border border-green-500/30'
+                                            }`}>
+                                            <span className={`text-xs font-semibold ${result.isPrejuizo ? 'text-red-400' : 'text-green-400'
+                                                }`}>● AO VIVO</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-5 space-y-4">
+                                    {/* Product Name Display */}
+                                    {productData.nome && (
+                                        <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+                                            <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Produto Analisado</label>
+                                            <div className="text-xl font-bold text-white">{productData.nome}</div>
+                                        </div>
                                     )}
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-semibold text-white">Resultado em Tempo Real</h2>
-                                    <p className="text-sm text-gray-500">
-                                        {result.isPrejuizo ? 'Atenção: Margem negativa!' : 'Situação atual do produto'}
-                                    </p>
+
+                                    {/* Cost and Price Cards */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl p-4 border border-orange-500/20">
+                                            <label className="text-xs text-orange-400 uppercase tracking-wider block mb-1">💰 Custo</label>
+                                            <div className="text-2xl font-black text-white">
+                                                {formatCurrency(productData.custoProducao)}
+                                            </div>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl p-4 border border-cyan-500/20">
+                                            <label className="text-xs text-cyan-400 uppercase tracking-wider block mb-1">🏷️ Preço</label>
+                                            <div className="text-2xl font-black text-white">
+                                                {formatCurrency(productData.precoVenda)}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Main Result Alert */}
+                                    <div className={`relative rounded-xl p-5 overflow-hidden ${result.isPrejuizo
+                                            ? 'bg-gradient-to-r from-red-900/50 to-red-800/30 border-2 border-red-500'
+                                            : 'bg-gradient-to-r from-green-900/50 to-green-800/30 border-2 border-green-500'
+                                        }`}>
+                                        {/* Glow effect */}
+                                        <div className={`absolute inset-0 ${result.isPrejuizo ? 'bg-red-500/10' : 'bg-green-500/10'} animate-pulse`}></div>
+
+                                        <div className="relative flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${result.isPrejuizo
+                                                        ? 'bg-red-500 shadow-lg shadow-red-500/50'
+                                                        : 'bg-green-500 shadow-lg shadow-green-500/50'
+                                                    }`}>
+                                                    {result.isPrejuizo ? (
+                                                        <AlertTriangle className="w-6 h-6 text-white" />
+                                                    ) : (
+                                                        <CheckCircle className="w-6 h-6 text-white" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xl font-black ${result.isPrejuizo ? 'text-red-400' : 'text-green-400'
+                                                        }`}>
+                                                        {result.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO SAUDÁVEL!'}
+                                                    </p>
+                                                    <p className={`text-sm ${result.isPrejuizo ? 'text-red-300' : 'text-green-300'
+                                                        }`}>
+                                                        {result.isPrejuizo ? 'Você está PAGANDO para vender!' : 'Sua margem está saudável!'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-3xl font-black ${result.isPrejuizo ? 'text-red-400' : 'text-green-400'
+                                                    }`}>
+                                                    {formatPercentage(result.margem)}
+                                                </p>
+                                                <p className="text-sm text-gray-400">
+                                                    {formatCurrency(result.lucroLiquido)}/un
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                                <div className={`p-4 rounded-xl border ${result.isPrejuizo
-                                    ? 'bg-[#ff3355]/5 border-[#ff3355]/20'
-                                    : 'bg-[#00ff88]/5 border-[#00ff88]/20'
-                                    }`}>
-                                    <p className="text-sm text-gray-400 mb-1">Lucro Líquido</p>
-                                    <p className={`text-2xl font-bold ${result.isPrejuizo ? 'text-[#ff3355]' : 'text-[#00ff88]'
-                                        }`}>
-                                        {formatCurrency(result.lucroLiquido)}
-                                    </p>
-                                </div>
-
-                                <div className={`p-4 rounded-xl border ${result.isPrejuizo
-                                    ? 'bg-[#ff3355]/5 border-[#ff3355]/20'
-                                    : 'bg-[#00ff88]/5 border-[#00ff88]/20'
-                                    }`}>
-                                    <p className="text-sm text-gray-400 mb-1">Margem de Lucro</p>
-                                    <p className={`text-2xl font-bold ${result.isPrejuizo ? 'text-[#ff3355]' : 'text-[#00ff88]'
-                                        }`}>
-                                        {formatPercentage(result.margem)}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {result.isPrejuizo && (
-                                <div className="mt-4 p-3 rounded-lg bg-[#ff3355]/10 border border-[#ff3355]/20 flex items-center gap-2">
-                                    <AlertTriangle className="w-5 h-5 text-[#ff3355] flex-shrink-0" />
-                                    <p className="text-sm text-[#ff3355]">
-                                        Você está operando no prejuízo! Consulte a I.A. para dicas.
-                                    </p>
-                                </div>
-                            )}
                         </div>
 
                         {/* AI Button */}

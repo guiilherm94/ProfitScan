@@ -51,8 +51,8 @@ export default function BlindagemPage() {
                 .eq('is_active', true)
                 .single()
 
-            // Para desenvolvimento, liberar acesso por padrão
-            const BYPASS_ACCESS = true
+            // Verificar acesso real (BYPASS_ACCESS = false para produção)
+            const BYPASS_ACCESS = false
             setHasAccess(BYPASS_ACCESS || !!access)
 
             // Carregar perfil da loja
@@ -129,24 +129,77 @@ export default function BlindagemPage() {
         )
     }
 
-    // Tela de acesso bloqueado
+    // Tela de acesso bloqueado com copy persuasiva
     if (!hasAccess) {
         return (
             <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-                <div className="max-w-md text-center">
-                    <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-6">
-                        <Lock className="w-8 h-8 text-yellow-400" />
+                <div className="max-w-lg text-center">
+                    {/* Badge de exclusividade */}
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30 mb-6">
+                        <Shield className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm text-purple-400 font-medium">Módulo Exclusivo</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-4">Módulo Premium</h1>
-                    <p className="text-gray-400 mb-6">
-                        A Blindagem de Reputação é um módulo adicional.
-                        Adquira agora para ter acesso ilimitado!
+
+                    {/* Ícone principal */}
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/30">
+                        <Shield className="w-10 h-10 text-white" />
+                    </div>
+
+                    {/* Headline */}
+                    <h1 className="text-3xl font-black text-white mb-4">
+                        Blindagem de Reputação
+                    </h1>
+
+                    {/* Subheadline persuasiva */}
+                    <p className="text-lg text-gray-300 mb-6 leading-relaxed">
+                        Nunca mais perca tempo escrevendo respostas para avaliações negativas.
+                        <span className="text-purple-400 font-semibold"> A I.A. faz isso por você em segundos!</span>
                     </p>
-                    <Link
-                        href="/vendas"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-bold rounded-xl"
+
+                    {/* Benefícios rápidos */}
+                    <div className="bg-white/5 rounded-xl p-4 mb-6 text-left">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                                <span className="text-gray-300 text-sm">3 respostas personalizadas por comentário</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                                <span className="text-gray-300 text-sm">Respostas no tom da sua marca</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                                <span className="text-gray-300 text-sm">Copie e cole direto no Google/iFood</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Preço */}
+                    <div className="mb-6">
+                        <p className="text-gray-500 text-sm line-through">De R$ 47,00</p>
+                        <p className="text-3xl font-black text-white">
+                            Por apenas <span className="text-green-400">R$ 9,90</span>
+                        </p>
+                        <p className="text-sm text-cyan-400">Pagamento único • Acesso vitalício</p>
+                    </div>
+
+                    {/* CTA */}
+                    <a
+                        href="https://vitrinego.mycartpanda.com/checkout/204999362:1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-lg rounded-xl hover:scale-105 transition-transform shadow-lg shadow-purple-500/30"
                     >
-                        Quero Acesso
+                        <Sparkles className="w-5 h-5" />
+                        QUERO BLINDAR MINHA REPUTAÇÃO
+                    </a>
+
+                    {/* Link para voltar */}
+                    <Link
+                        href="/dashboard"
+                        className="block mt-6 text-gray-500 hover:text-gray-400 text-sm transition-colors"
+                    >
+                        ← Voltar ao Dashboard
                     </Link>
                 </div>
             </div>
@@ -250,8 +303,8 @@ export default function BlindagemPage() {
                                     >
                                         <Star
                                             className={`w-10 h-10 ${value <= stars
-                                                    ? 'text-yellow-400 fill-yellow-400'
-                                                    : 'text-gray-700'
+                                                ? 'text-yellow-400 fill-yellow-400'
+                                                : 'text-gray-700'
                                                 }`}
                                         />
                                     </button>
@@ -314,8 +367,8 @@ export default function BlindagemPage() {
                             >
                                 <div className="flex items-center justify-between mb-3">
                                     <span className={`text-sm font-semibold px-3 py-1 rounded-full ${index === 0 ? 'bg-blue-500/20 text-blue-400' :
-                                            index === 1 ? 'bg-green-500/20 text-green-400' :
-                                                'bg-purple-500/20 text-purple-400'
+                                        index === 1 ? 'bg-green-500/20 text-green-400' :
+                                            'bg-purple-500/20 text-purple-400'
                                         }`}>
                                         {response.type}
                                     </span>

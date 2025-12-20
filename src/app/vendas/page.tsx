@@ -4,8 +4,9 @@ import { useState } from 'react'
 import {
     Zap, Clock, Bot, SlidersHorizontal, Shield, Smartphone,
     ChevronDown, ChevronUp, Check, AlertTriangle, TrendingUp,
-    Play, Star, Lock, Mail, FileText
+    Star, Lock, Mail, FileText
 } from 'lucide-react'
+import AnimatedDemo from '@/components/AnimatedDemo'
 
 export default function VendasPage() {
     const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -70,43 +71,9 @@ export default function VendasPage() {
                         <span className="text-cyan-400">Inteligência Artificial de Precificação</span>.
                     </p>
 
-                    {/* Video/Image placeholder */}
-                    <div className="relative max-w-2xl mx-auto mb-10">
-                        <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl border border-white/10 flex items-center justify-center overflow-hidden">
-                            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwMjAiIGZpbGwtb3BhY2l0eT0iMC40Ij48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZoLTJ2LTRoMnY0em0tNiA2aC0ydi00aDJ2NHptMC02aC0ydi00aDJ2NHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30"></div>
-
-                            {/* Mock phone screen with alert */}
-                            <div className="relative w-48 h-80 bg-black rounded-3xl border-4 border-gray-700 shadow-2xl">
-                                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-4 bg-gray-800 rounded-full"></div>
-                                <div className="pt-8 px-3 h-full">
-                                    <div className="bg-[#111] rounded-xl p-3 h-full flex flex-col">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center">
-                                                <Zap className="w-3 h-3 text-black" />
-                                            </div>
-                                            <span className="text-[10px] font-bold text-white">ProfitScan</span>
-                                        </div>
-                                        <div className="flex-1 flex flex-col justify-center">
-                                            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-2 mb-2">
-                                                <p className="text-[8px] text-red-400 font-bold text-center">🚨 ALERTA DE PREJUÍZO</p>
-                                                <p className="text-[7px] text-red-300 text-center mt-1">Margem: -12.5%</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-[8px] text-gray-400">Produto: Coxinha</p>
-                                                <p className="text-[10px] text-white font-bold">-R$ 0,50 por unidade</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Play button overlay */}
-                            <button className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group">
-                                <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
-                                    <Play className="w-8 h-8 text-white ml-1" fill="white" />
-                                </div>
-                            </button>
-                        </div>
+                    {/* Interactive Demo */}
+                    <div className="mb-10">
+                        <AnimatedDemo />
                     </div>
 
                     {/* CTA Button */}
@@ -308,15 +275,6 @@ export default function VendasPage() {
                                 <span className="text-5xl font-black text-green-400">R$ 19,90</span>
                             </div>
                             <p className="text-cyan-400 mt-4 font-medium">✨ Pagamento Único • Acesso Vitalício</p>
-
-                            {/* Mock product image */}
-                            <div className="mt-6 flex items-center justify-center gap-4">
-                                <div className="w-20 h-36 bg-black rounded-2xl border-2 border-gray-700 flex items-center justify-center">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center">
-                                        <Zap className="w-6 h-6 text-black" />
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -327,7 +285,9 @@ export default function VendasPage() {
 
                     {/* CTA */}
                     <a
-                        href="/dashboard"
+                        href="https://vitrinego.mycartpanda.com/checkout/204999344:1"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-3 px-10 py-6 bg-gradient-to-r from-green-500 to-emerald-600 text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform shadow-xl shadow-green-500/30"
                     >
                         👉 QUERO MEU ACESSO VITALÍCIO AGORA
@@ -405,7 +365,9 @@ export default function VendasPage() {
                     </h2>
                     <p className="text-gray-400 mb-8">Pare de perder dinheiro sem saber. Tome o controle agora.</p>
                     <a
-                        href="/dashboard"
+                        href="https://vitrinego.mycartpanda.com/checkout/204999344:1"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-3 px-8 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-black font-bold text-lg rounded-xl hover:scale-105 transition-transform shadow-lg shadow-green-500/25"
                     >
                         👉 COMEÇAR AGORA POR R$ 19,90

@@ -47,14 +47,8 @@ interface CartPandaWebhook {
 }
 
 // Gerar senha aleatória segura
-function generatePassword(length: number = 12): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%'
-    let password = ''
-    for (let i = 0; i < length; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return password
-}
+// Senha padrão para novos usuários (pode ser alterada nas configurações)
+const DEFAULT_PASSWORD = 'senha123'
 
 export async function POST(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdmin()
@@ -108,7 +102,7 @@ export async function POST(request: NextRequest) {
         if (existingUser) {
             userId = existingUser.id
         } else {
-            generatedPassword = generatePassword()
+            generatedPassword = DEFAULT_PASSWORD
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: email.toLowerCase(),
                 password: generatedPassword,
