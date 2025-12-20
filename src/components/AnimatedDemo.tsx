@@ -139,34 +139,60 @@ export default function AnimatedDemo() {
                                 {/* Efeito de brilho */}
                                 <div className={`absolute inset-0 ${scenario.isPrejuizo ? 'bg-red-500/10' : 'bg-green-500/10'} animate-pulse`}></div>
 
-                                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center flex-shrink-0 ${scenario.isPrejuizo
+                                <div className="relative">
+                                    {/* Mobile: Layout vertical centralizado */}
+                                    <div className="flex flex-col items-center text-center sm:hidden">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${scenario.isPrejuizo
                                             ? 'bg-red-500 shadow-lg shadow-red-500/50'
                                             : 'bg-green-500 shadow-lg shadow-green-500/50'
                                             }`}>
                                             {scenario.isPrejuizo ? (
-                                                <AlertTriangle className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+                                                <AlertTriangle className="w-6 h-6 text-white" />
                                             ) : (
-                                                <CheckCircle className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+                                                <CheckCircle className="w-6 h-6 text-white" />
                                             )}
                                         </div>
-                                        <div>
-                                            <p className={`text-base sm:text-2xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
-                                                {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO!'}
-                                            </p>
-                                            <p className={`text-xs sm:text-sm ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
-                                                {scenario.isPrejuizo ? 'Pagando para vender!' : 'Margem excelente!'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className={`text-2xl sm:text-4xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                        <p className={`text-lg font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                            {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO!'}
+                                        </p>
+                                        <p className={`text-3xl font-black my-1 ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
                                             {scenario.margem > 0 ? '+' : ''}{scenario.margem.toFixed(1)}%
                                         </p>
-                                        <p className="text-xs sm:text-base text-gray-400">
-                                            {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)}/un
+                                        <p className={`text-xs ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
+                                            {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)} por unidade
                                         </p>
+                                    </div>
+
+                                    {/* Desktop: Layout horizontal */}
+                                    <div className="hidden sm:flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 ${scenario.isPrejuizo
+                                                ? 'bg-red-500 shadow-lg shadow-red-500/50'
+                                                : 'bg-green-500 shadow-lg shadow-green-500/50'
+                                                }`}>
+                                                {scenario.isPrejuizo ? (
+                                                    <AlertTriangle className="w-7 h-7 text-white" />
+                                                ) : (
+                                                    <CheckCircle className="w-7 h-7 text-white" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className={`text-2xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                                    {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO!'}
+                                                </p>
+                                                <p className={`text-sm ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
+                                                    {scenario.isPrejuizo ? 'Pagando para vender!' : 'Margem excelente!'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={`text-4xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                                {scenario.margem > 0 ? '+' : ''}{scenario.margem.toFixed(1)}%
+                                            </p>
+                                            <p className="text-base text-gray-400">
+                                                {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)}/un
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

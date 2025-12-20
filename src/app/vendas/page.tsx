@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
     Zap, Clock, Bot, SlidersHorizontal, Shield, Smartphone,
     ChevronDown, ChevronUp, Check, AlertTriangle, TrendingUp,
@@ -386,25 +387,32 @@ export default function VendasPage() {
                             <span className="font-bold text-white">ProfitScan<span className="text-green-400">AI</span></span>
                         </div>
 
-                        <div className="flex items-center gap-6 text-sm">
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
-                                <FileText className="w-4 h-4" /> Política de Privacidade
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
-                                <FileText className="w-4 h-4" /> Termos de Uso
-                            </a>
+                        <div className="flex items-center gap-6 text-sm flex-wrap justify-center sm:justify-start">
+                            <Link href="/privacidade" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                                <FileText className="w-4 h-4" /> Privacidade
+                            </Link>
+                            <Link href="/termos" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                                <FileText className="w-4 h-4" /> Termos
+                            </Link>
+                            <Link href="/aviso-legal" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                                <FileText className="w-4 h-4" /> Aviso Legal
+                            </Link>
+                            <Link href="/reembolso" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                                <FileText className="w-4 h-4" /> Reembolso
+                            </Link>
                         </div>
                     </div>
 
                     <div className="text-center text-xs text-gray-600 space-y-2">
                         <p>
-                            Este site não é afiliado ao Facebook ou a qualquer entidade do Facebook.
-                            Depois que você sair do Facebook, a responsabilidade não é deles e sim do nosso site.
+                            Este site não faz parte do site do Facebook ou da Meta Platforms, Inc.
+                            Além disso, este site NÃO é endossado pelo Facebook de nenhuma maneira.
+                            FACEBOOK é uma marca comercial da META PLATFORMS, INC.
                         </p>
                         <p className="flex items-center justify-center gap-2">
-                            <Mail className="w-3 h-3" /> suporte@profitscan.ai
+                            <Mail className="w-3 h-3" /> molivesutter@gmail.com
                         </p>
-                        <p>CNPJ: 00.000.000/0001-00 | © 2025 ProfitScan AI. Todos os direitos reservados.</p>
+                        <p>© 2025 ProfitScan AI. Todos os direitos reservados.</p>
                     </div>
                 </div>
             </footer>
