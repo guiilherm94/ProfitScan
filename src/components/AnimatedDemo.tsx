@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Zap, Bot, TrendingUp, TrendingDown, Sparkles, Loader2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Zap, Bot, Loader2, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react'
 
 // Cenários de demo para rotacionar
 const DEMO_SCENARIOS = [
@@ -36,40 +36,39 @@ const DEMO_SCENARIOS = [
 
 export default function AnimatedDemo() {
     const [currentScenario, setCurrentScenario] = useState(0)
-    const [phase, setPhase] = useState<'ready' | 'processing' | 'result'>('ready')
+    const [phase, setPhase] = useState<'processing' | 'result'>('processing')
 
     const scenario = DEMO_SCENARIOS[currentScenario]
 
     // Ciclo de animação
     useEffect(() => {
         const cycle = () => {
-            // Fase 1: Ready (mostrar dados)
-            setPhase('ready')
+            // Fase 1: Processing
+            setPhase('processing')
 
-            // Fase 2: Processing (após 1.5s)
-            setTimeout(() => setPhase('processing'), 1500)
+            // Fase 2: Result (após 2s)
+            setTimeout(() => setPhase('result'), 2000)
 
-            // Fase 3: Result (após 3.5s)
-            setTimeout(() => setPhase('result'), 3500)
-
-            // Reset e próximo cenário (após 7s)
+            // Reset e próximo cenário (após 5s)
             setTimeout(() => {
                 setCurrentScenario((prev) => (prev + 1) % DEMO_SCENARIOS.length)
-            }, 7000)
+            }, 5000)
         }
 
         cycle()
-        const interval = setInterval(cycle, 7000)
+        const interval = setInterval(cycle, 5000)
         return () => clearInterval(interval)
     }, [])
 
+    const isProcessing = phase === 'processing'
+
     return (
         <div className="relative w-full max-w-2xl mx-auto px-2 sm:px-0">
-            {/* Glow effect animado */}
-            <div className={`absolute -inset-4 rounded-3xl blur-2xl transition-all duration-1000 ${phase === 'result'
+            {/* Glow effect */}
+            <div className={`absolute -inset-4 rounded-3xl blur-2xl transition-all duration-500 ${!isProcessing
                 ? scenario.isPrejuizo
-                    ? 'bg-red-500/40 animate-pulse'
-                    : 'bg-green-500/40 animate-pulse'
+                    ? 'bg-red-500/30'
+                    : 'bg-green-500/30'
                 : 'bg-cyan-500/20'
                 }`}></div>
 
@@ -92,127 +91,99 @@ export default function AnimatedDemo() {
                     </div>
                 </div>
 
-                <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-                    {/* Produto */}
+                <div className="p-4 sm:p-6 space-y-4">
+                    {/* Card 1: Produto - Sempre visível */}
                     <div className="bg-white/5 rounded-xl p-3 sm:p-4 border border-white/5">
-                        <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1 sm:mb-2">Produto Analisado</label>
+                        <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Produto Analisado</label>
                         <div className="text-lg sm:text-2xl font-bold text-white">{scenario.produto}</div>
                     </div>
 
-                    {/* Cards de Custo e Preço - SEMPRE VISÍVEIS */}
+                    {/* Cards de Custo e Preço - Sempre visíveis */}
                     <div className="grid grid-cols-2 gap-2 sm:gap-4">
                         <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl p-3 sm:p-4 border border-orange-500/20">
-                            <label className="text-[10px] sm:text-xs text-orange-400 uppercase tracking-wider block mb-1 sm:mb-2">💰 Custo</label>
+                            <label className="text-[10px] sm:text-xs text-orange-400 uppercase tracking-wider block mb-1">💰 Custo</label>
                             <div className="text-xl sm:text-3xl font-black text-white">
                                 R$ {scenario.custo.toFixed(2)}
                             </div>
                         </div>
                         <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl p-3 sm:p-4 border border-cyan-500/20">
-                            <label className="text-[10px] sm:text-xs text-cyan-400 uppercase tracking-wider block mb-1 sm:mb-2">🏷️ Preço</label>
+                            <label className="text-[10px] sm:text-xs text-cyan-400 uppercase tracking-wider block mb-1">🏷️ Preço</label>
                             <div className="text-xl sm:text-3xl font-black text-white">
                                 R$ {scenario.preco.toFixed(2)}
                             </div>
                         </div>
                     </div>
 
-                    {/* PROCESSING STATE - Spinner sempre visível */}
-                    {phase !== 'result' && (
-                        <div className="bg-gradient-to-r from-purple-500/20 via-cyan-500/20 to-purple-500/20 rounded-xl p-4 sm:p-6 border border-cyan-500/30 animate-pulse">
-                            <div className="flex items-center justify-center gap-3 sm:gap-4">
-                                <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-cyan-400 animate-spin" />
+                    {/* Card 3: Resultado - Sempre visível, muda conteúdo */}
+                    <div className={`rounded-xl p-4 border-2 transition-all duration-500 h-[88px] flex items-center ${isProcessing
+                        ? 'bg-gradient-to-r from-purple-500/10 to-cyan-500/10 border-cyan-500/30'
+                        : scenario.isPrejuizo
+                            ? 'bg-gradient-to-r from-red-900/40 to-red-800/20 border-red-500'
+                            : 'bg-gradient-to-r from-green-900/40 to-green-800/20 border-green-500'
+                        }`}>
+                        {isProcessing ? (
+                            // Estado: Processando
+                            <div className="flex items-center justify-center gap-3 w-full">
+                                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
                                 <div>
-                                    <p className="text-lg sm:text-xl font-bold text-white">Processando...</p>
-                                    <p className="text-xs sm:text-sm text-cyan-400">A I.A. está analisando</p>
+                                    <p className="text-lg font-bold text-white">Analisando margem...</p>
+                                    <p className="text-sm text-cyan-400">Calculando lucro real</p>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* RESULT STATE - Alerta bem chamativo */}
-                    {phase === 'result' && (
-                        <>
-                            {/* Alerta Principal */}
-                            <div className={`relative rounded-xl p-3 sm:p-5 overflow-hidden ${scenario.isPrejuizo
-                                ? 'bg-gradient-to-r from-red-900/50 to-red-800/30 border-2 border-red-500'
-                                : 'bg-gradient-to-r from-green-900/50 to-green-800/30 border-2 border-green-500'
-                                }`}>
-                                {/* Efeito de brilho */}
-                                <div className={`absolute inset-0 ${scenario.isPrejuizo ? 'bg-red-500/10' : 'bg-green-500/10'} animate-pulse`}></div>
-
-                                <div className="relative">
-                                    {/* Mobile: Layout vertical centralizado */}
-                                    <div className="flex flex-col items-center text-center sm:hidden">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${scenario.isPrejuizo
-                                            ? 'bg-red-500 shadow-lg shadow-red-500/50'
-                                            : 'bg-green-500 shadow-lg shadow-green-500/50'
-                                            }`}>
-                                            {scenario.isPrejuizo ? (
-                                                <AlertTriangle className="w-6 h-6 text-white" />
-                                            ) : (
-                                                <CheckCircle className="w-6 h-6 text-white" />
-                                            )}
-                                        </div>
+                        ) : (
+                            // Estado: Resultado
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${scenario.isPrejuizo
+                                        ? 'bg-red-500 shadow-lg shadow-red-500/50'
+                                        : 'bg-green-500 shadow-lg shadow-green-500/50'
+                                        }`}>
+                                        {scenario.isPrejuizo ? (
+                                            <AlertTriangle className="w-6 h-6 text-white" />
+                                        ) : (
+                                            <CheckCircle className="w-6 h-6 text-white" />
+                                        )}
+                                    </div>
+                                    <div>
                                         <p className={`text-lg font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
                                             {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO!'}
                                         </p>
-                                        <p className={`text-3xl font-black my-1 ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
-                                            {scenario.margem > 0 ? '+' : ''}{scenario.margem.toFixed(1)}%
-                                        </p>
-                                        <p className={`text-xs ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
-                                            {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)} por unidade
+                                        <p className={`text-sm ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
+                                            {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)}/un
                                         </p>
                                     </div>
-
-                                    {/* Desktop: Layout horizontal */}
-                                    <div className="hidden sm:flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 ${scenario.isPrejuizo
-                                                ? 'bg-red-500 shadow-lg shadow-red-500/50'
-                                                : 'bg-green-500 shadow-lg shadow-green-500/50'
-                                                }`}>
-                                                {scenario.isPrejuizo ? (
-                                                    <AlertTriangle className="w-7 h-7 text-white" />
-                                                ) : (
-                                                    <CheckCircle className="w-7 h-7 text-white" />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <p className={`text-2xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
-                                                    {scenario.isPrejuizo ? '🚨 PREJUÍZO!' : '✅ LUCRO!'}
-                                                </p>
-                                                <p className={`text-sm ${scenario.isPrejuizo ? 'text-red-300' : 'text-green-300'}`}>
-                                                    {scenario.isPrejuizo ? 'Pagando para vender!' : 'Margem excelente!'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className={`text-4xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
-                                                {scenario.margem > 0 ? '+' : ''}{scenario.margem.toFixed(1)}%
-                                            </p>
-                                            <p className="text-base text-gray-400">
-                                                {scenario.lucro > 0 ? '+' : ''}R$ {scenario.lucro.toFixed(2)}/un
-                                            </p>
-                                        </div>
-                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`text-3xl sm:text-4xl font-black ${scenario.isPrejuizo ? 'text-red-400' : 'text-green-400'}`}>
+                                        {scenario.margem > 0 ? '+' : ''}{scenario.margem.toFixed(1)}%
+                                    </p>
                                 </div>
                             </div>
+                        )}
+                    </div>
 
-                            {/* Resposta da I.A. */}
-                            <div className="relative">
-                                <div className="absolute -inset-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-xl opacity-75 animate-pulse"></div>
-                                <div className="relative bg-[#111] rounded-xl p-3 sm:p-4">
-                                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                            <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                                        </div>
-                                        <span className="text-xs sm:text-sm font-bold text-purple-400">Consultor I.A.</span>
-                                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 animate-pulse" />
-                                    </div>
-                                    <p className="text-white text-sm sm:text-base leading-relaxed">{scenario.aiResponse}</p>
+                    {/* Card 4: Consultor I.A. - Sempre visível, muda conteúdo */}
+                    <div className="relative rounded-xl overflow-hidden">
+                        <div className={`absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 transition-opacity duration-500 ${isProcessing ? 'opacity-30' : 'opacity-75'
+                            }`}></div>
+                        <div className="relative bg-[#111] m-[2px] rounded-xl p-3 sm:p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                 </div>
+                                <span className="text-xs sm:text-sm font-bold text-purple-400">Consultor I.A.</span>
+                                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400" />
                             </div>
-                        </>
-                    )}
+                            {isProcessing ? (
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                                    <p className="text-gray-400 text-sm">Gerando recomendação personalizada...</p>
+                                </div>
+                            ) : (
+                                <p className="text-white text-sm sm:text-base leading-relaxed">{scenario.aiResponse}</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Footer com indicadores */}
