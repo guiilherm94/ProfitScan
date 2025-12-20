@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         const supabase = createClient(supabaseUrl, supabaseKey)
 
         const body = await request.json()
-        const { produto, custoProducao, precoVenda, custosFixos, margem, lucro, isPrejuizo } = body
+        const { produto, custoProducao, precoVenda, custosFixos, margem, lucro, isPrejuizo, status, statusMessage } = body
 
         // Validate input
         if (!produto || precoVenda <= 0) {
@@ -65,8 +65,8 @@ Preço de Venda: R$ ${precoVenda.toFixed(2)}
 Custos Fixos/Impostos: ${custosFixos}%
 Lucro Líquido por unidade: R$ ${lucro.toFixed(2)}
 Margem de Lucro Atual: ${margem.toFixed(1)}%
-Avaliação Prévia: ${margemIdealSugestao}
-Situação: ${isPrejuizo ? 'PREJUÍZO - URGENTE!' : 'OPERANDO COM LUCRO'}
+Avaliação do Sistema: ${status?.toUpperCase() || margemIdealSugestao} - ${statusMessage || 'Sem mensagem'}
+Situação: ${isPrejuizo ? 'PREJUÍZO - URGENTE!' : margem < 15 ? 'MARGEM BAIXA - ATENÇÃO' : 'OPERANDO COM LUCRO'}
 
 Analise este produto e me dê sua consultoria especializada.`
 
@@ -92,8 +92,11 @@ Analise este produto e me dê sua consultoria especializada.`
             const { data: { session } } = await supabase.auth.getSession()
 
             if (session) {
+                const userId = session.user.id
+
+                // Insert new history entry
                 await supabase.from('history').insert({
-                    user_id: session.user.id,
+                    user_id: userId,
                     produto,
                     custo_producao: custoProducao,
                     preco_venda: precoVenda,
@@ -101,6 +104,33 @@ Analise este produto e me dê sua consultoria especializada.`
                     margem,
                     resposta_ia: aiAnalysis
                 })
+
+                // Check if user has more than 100 entries
+                const { count } = await supabase
+                    .from('history')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', userId)
+
+                // If more than 100, delete the oldest entries
+                if (count && count > 100) {
+                    const entriesToDelete = count - 100
+
+                    // Get the oldest entries to delete
+                    const { data: oldestEntries } = await supabase
+                        .from('history')
+                        .select('id')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: true })
+                        .limit(entriesToDelete)
+
+                    if (oldestEntries && oldestEntries.length > 0) {
+                        const idsToDelete = oldestEntries.map(e => e.id)
+                        await supabase
+                            .from('history')
+                            .delete()
+                            .in('id', idsToDelete)
+                    }
+                }
             }
         } catch (historyError) {
             // Don't fail if history save fails
@@ -111,8 +141,29 @@ Analise este produto e me dê sua consultoria especializada.`
 
     } catch (error) {
         console.error('API Error:', error)
+
+        // Extract meaningful error message
+        let errorMessage = 'Erro ao processar análise'
+        if (error instanceof Error) {
+            errorMessage = error.message
+            console.error('Error details:', error.message)
+        }
+
+        // Check for OpenAI specific errors
+        if (error && typeof error === 'object' && 'status' in error) {
+            const apiError = error as { status: number; message?: string }
+            console.error('API Status:', apiError.status)
+            if (apiError.status === 401) {
+                errorMessage = 'Chave da OpenAI inválida ou expirada'
+            } else if (apiError.status === 429) {
+                errorMessage = 'Limite de requisições atingido. Tente novamente em alguns segundos.'
+            } else if (apiError.status === 500) {
+                errorMessage = 'Erro no servidor da OpenAI. Tente novamente.'
+            }
+        }
+
         return NextResponse.json(
-            { error: 'Erro ao processar análise' },
+            { error: errorMessage },
             { status: 500 }
         )
     }

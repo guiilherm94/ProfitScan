@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Script from 'next/script'
 import {
     Zap, Clock, Bot, SlidersHorizontal, Shield, Smartphone,
     ChevronDown, ChevronUp, Check, AlertTriangle, TrendingUp,
@@ -286,9 +287,7 @@ export default function VendasPage() {
 
                     {/* CTA */}
                     <a
-                        href="https://vitrinego.mycartpanda.com/checkout/204999344:1"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="https://vitrinego.mycartpanda.com/checkout/204999344:1?tkg=ic"
                         className="inline-flex items-center gap-3 px-10 py-6 bg-gradient-to-r from-green-500 to-emerald-600 text-black font-bold text-xl rounded-xl hover:scale-105 transition-transform shadow-xl shadow-green-500/30"
                     >
                         👉 QUERO MEU ACESSO VITALÍCIO AGORA
@@ -366,9 +365,7 @@ export default function VendasPage() {
                     </h2>
                     <p className="text-gray-400 mb-8">Pare de perder dinheiro sem saber. Tome o controle agora.</p>
                     <a
-                        href="https://vitrinego.mycartpanda.com/checkout/204999344:1"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="https://vitrinego.mycartpanda.com/checkout/204999344:1?tkg=ic"
                         className="inline-flex items-center gap-3 px-8 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-black font-bold text-lg rounded-xl hover:scale-105 transition-transform shadow-lg shadow-green-500/25"
                     >
                         👉 COMEÇAR AGORA POR R$ 19,90
@@ -416,6 +413,219 @@ export default function VendasPage() {
                     </div>
                 </div>
             </footer>
+
+            {/* Meta Pixel Code */}
+            <Script id="meta-pixel" strategy="afterInteractive">
+                {`
+                    !function(f,b,e,v,n,t,s)
+                    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                    n.queue=[];t=b.createElement(e);t.async=!0;
+                    t.src=v;s=b.getElementsByTagName(e)[0];
+                    s.parentNode.insertBefore(t,s)}(window, document,'script',
+                    'https://connect.facebook.net/en_US/fbevents.js');
+                    fbq('init', '2308235273025002');
+                    fbq('track', 'PageView');
+                `}
+            </Script>
+            <noscript>
+                <img
+                    height="1"
+                    width="1"
+                    style={{ display: 'none' }}
+                    src="https://www.facebook.com/tr?id=2308235273025002&ev=PageView&noscript=1"
+                    alt=""
+                />
+            </noscript>
+
+            {/* TrackGO - Sistema de rastreamento */}
+            <Script id="trackgo" strategy="afterInteractive">
+                {`
+                    (function() { 
+                        'use strict'; 
+                        const CONFIG = { 
+                            ignoreAllIframes: !!document.querySelector('[data-trackgo-ignore-iframe]'), 
+                            ignoreScriptRetry: !!document.querySelector('[data-trackgo-ignore-retry]'), 
+                            fastStart: !!document.querySelector('[data-trackgo-fast-start]'), 
+                            replacePlusSignal: !!document.querySelector('[data-trackgo-plus-signal]'), 
+                            ignoreClasses: document.querySelector('[data-trackgo-ignore-classes]')?.getAttribute('data-trackgo-ignore-classes')?.split(' ')?.filter(c => !!c) || []    
+                        }; 
+                        const FB_PARAMS = ['fbclid', '_fbc', '_fbp']; 
+                        const URL_PARAMS = ['fbclid', 'fbp', 'fbc'];
+                        const SHOTGUN_PARAMS = ['subid4', 'aff_sub4', 'cid', 'sck'];
+                        const ALL_PARAMS = [...URL_PARAMS, ...SHOTGUN_PARAMS];
+                        const COOKIE_EXPIRATION_DAYS = 90; 
+                        let currentParamCache = null; 
+                        let lastUrlParams = ''; 
+                        let isInitialized = false; 
+                        function getCookie(name) { 
+                            const match = document.cookie.match('(^|;)\\\\s*' + name + '\\\\s*=\\\\s*([^;]+)'); 
+                            return match ? decodeURIComponent(match[2]) : null; 
+                        } 
+                        function getTopLevelDomain() { 
+                            const parts = window.location.hostname.split('.'); 
+                            if (parts.length > 1) { return '.' + parts.slice(-2).join('.'); } 
+                            return window.location.hostname; 
+                        } 
+                        function setCookie(name, value, days = COOKIE_EXPIRATION_DAYS) { 
+                            try { 
+                                const expirationDate = new Date(); 
+                                expirationDate.setTime(expirationDate.getTime() + (days * 24 * 60 * 60 * 1000)); 
+                                const expires = "expires=" + expirationDate.toUTCString(); 
+                                const domain = "domain=" + getTopLevelDomain(); 
+                                document.cookie = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/;' + domain + ';SameSite=Lax;Secure'; 
+                                return true; 
+                            } catch (error) { console.error('TrackGO: Erro ao salvar cookie', error); return false; } 
+                        } 
+                        function generateShotgunValue(fbp, fbc) { return fbp + '|' + fbc; }
+                        function generateAndSaveShotgunParams(fbp, fbc, fbclid) {
+                            setCookie('fbp', fbp); setCookie('fbc', fbc);
+                            if (fbclid) setCookie('fbclid', fbclid);
+                            const shotgunValue = generateShotgunValue(fbp, fbc);
+                            setCookie('subid4', shotgunValue); setCookie('aff_sub4', shotgunValue);
+                            setCookie('cid', shotgunValue); setCookie('sck', shotgunValue);
+                        }
+                        function hasInitiateCheckoutParam(url) {
+                            try { const urlObj = new URL(url, window.location.origin); return urlObj.searchParams.get('tkg') === 'ic'; }
+                            catch (error) { return url.includes('tkg=ic'); }
+                        }
+                        function fireInitiateCheckout() {
+                            try { if (typeof window.fbq === 'function') { window.fbq('track', 'InitiateCheckout'); return true; } return false; }
+                            catch (error) { return false; }
+                        }
+                        function checkCurrentPageForInitiateCheckout() { if (hasInitiateCheckoutParam(window.location.href)) { fireInitiateCheckout(); } }
+                        function extractTargetUrl(element) {
+                            if (element.tagName === 'A' && element.href) return element.href;
+                            const parentLink = element.closest('a'); if (parentLink && parentLink.href) return parentLink.href;
+                            const dataUrl = element.getAttribute('data-url') || element.getAttribute('data-href') || element.getAttribute('data-link') || element.getAttribute('data-target');
+                            if (dataUrl) return dataUrl;
+                            const onclick = element.getAttribute('onclick');
+                            if (onclick) { const locationMatch = onclick.match(/(?:window\\.)?location(?:\\.href)?\\s*=\\s*['"](.*?)['"]/) || onclick.match(/(?:window\\.)?open\\(['"](.*?)['"]/) || onclick.match(/href\\s*=\\s*['"](.*?)['"]/) || onclick.match(/url['"]\s*:\\s*['"](.*?)['"]/) || onclick.match(/['"](https?:\\/\\/[^'"]+)['"]/); if (locationMatch) return locationMatch[1]; }
+                            return null;
+                        }
+                        function handleInitiateCheckoutClick(event, targetUrl) {
+                            if (!hasInitiateCheckoutParam(targetUrl)) return false;
+                            const link = event.target.closest('a');
+                            if (link && (link.target === '_blank' || event.ctrlKey || event.metaKey || event.button === 1)) { fireInitiateCheckout(); return false; }
+                            event.preventDefault(); event.stopPropagation();
+                            fireInitiateCheckout();
+                            setTimeout(() => { window.location.href = targetUrl; }, 150);
+                            return true;
+                        }
+                        function setupInitiateCheckoutListeners() {
+                            document.addEventListener('click', function(event) { const element = event.target; const targetUrl = extractTargetUrl(element); if (targetUrl) { handleInitiateCheckoutClick(event, targetUrl); } }, true);
+                        }
+                        function initializeFbParams() { 
+                            const urlParams = new URLSearchParams(window.location.search); 
+                            const currentUrl = window.location.search; 
+                            if (lastUrlParams === currentUrl && isInitialized) return; 
+                            let hasNewParams = false; 
+                            let fbp = getCookie('_fbp');
+                            const urlFbp = urlParams.get('_fbp') || urlParams.get('fbp');
+                            if (urlFbp) { fbp = urlFbp; setCookie('_fbp', fbp); hasNewParams = true; }
+                            if (!fbp) return;
+                            let fbc = getCookie('_fbc');
+                            const fbclid = urlParams.get('fbclid');
+                            const urlFbc = urlParams.get('_fbc') || urlParams.get('fbc');
+                            if (urlFbc) { fbc = urlFbc; setCookie('_fbc', fbc); hasNewParams = true; }
+                            if (!fbc && fbclid) { fbc = 'fb.1.' + Math.floor(Date.now() / 1000) + '.' + fbclid; setCookie('_fbc', fbc); hasNewParams = true; }
+                            if (!fbc) return;
+                            generateAndSaveShotgunParams(fbp, fbc, fbclid);
+                            checkCurrentPageForInitiateCheckout();
+                            lastUrlParams = currentUrl; 
+                            if (hasNewParams) currentParamCache = null; 
+                            isInitialized = true; 
+                        }
+                        class ParamManager { 
+                            static getFbParameters() { 
+                                if (currentParamCache && lastUrlParams === window.location.search) return currentParamCache; 
+                                const params = new Map(); 
+                                ALL_PARAMS.forEach(param => { const cookieValue = getCookie(param); if (cookieValue && cookieValue !== '') params.set(param, cookieValue); });
+                                currentParamCache = params; 
+                                return params; 
+                            } 
+                            static addFbParametersToUrl(url) { 
+                                if (!url) return url; 
+                                try { 
+                                    const urlObj = new URL(url, window.location.origin); 
+                                    const allParams = this.getFbParameters(); 
+                                    allParams.forEach((value, key) => { urlObj.searchParams.set(key, value); }); 
+                                    let finalUrl = urlObj.toString(); 
+                                    if (CONFIG.replacePlusSignal) finalUrl = finalUrl.split("+").join("%20"); 
+                                    return finalUrl; 
+                                } catch (error) { return url; } 
+                            } 
+                        }
+                        function addParamsToLinks() { 
+                            if (!isInitialized) return; 
+                            document.querySelectorAll('a').forEach(link => { 
+                                if (link.href.startsWith('mailto:') || link.href.startsWith('tel:') || link.href.includes('#') || CONFIG.ignoreClasses?.some(className => link.classList.contains(className))) return; 
+                                try { 
+                                    const originalHref = link.getAttribute('data-original-href') || link.href; 
+                                    if (!link.getAttribute('data-original-href')) link.setAttribute('data-original-href', originalHref); 
+                                    link.href = ParamManager.addFbParametersToUrl(originalHref); 
+                                } catch (error) { } 
+                            }); 
+                        }
+                        function addParamsToForms() { 
+                            if (!isInitialized) return; 
+                            document.querySelectorAll('form').forEach(form => { 
+                                if (CONFIG.ignoreClasses?.some(className => form.classList.contains(className))) return; 
+                                try { 
+                                    if (form.action && form.action !== '') form.action = ParamManager.addFbParametersToUrl(form.action); 
+                                    const allParams = ParamManager.getFbParameters();
+                                    allParams.forEach((value, key) => { 
+                                        const existingField = form.querySelector('input[name="' + key + '"]'); 
+                                        if (existingField) { existingField.setAttribute('value', value); return; } 
+                                        const hiddenField = document.createElement('input'); 
+                                        hiddenField.type = 'hidden'; hiddenField.name = key; hiddenField.value = value;
+                                        hiddenField.setAttribute('data-trackgo', 'true'); form.appendChild(hiddenField); 
+                                    }); 
+                                } catch (error) { } 
+                            }); 
+                        }
+                        function addParamsToIframes() { 
+                            if (CONFIG.ignoreAllIframes || !isInitialized) return; 
+                            document.querySelectorAll('iframe').forEach(iframe => { 
+                                const videoHosts = ['pandavideo.com', 'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com', 'player.vimeo.com', 'wistia.com', 'wistia.net', 'dailymotion.com', 'facebook.com/plugins/video', 'fast.wistia.net']; 
+                                if (!iframe.src || iframe.src === '' || videoHosts.some(host => iframe.src.includes(host)) || CONFIG.ignoreClasses?.some(className => iframe.classList.contains(className))) return; 
+                                try { if (hasInitiateCheckoutParam(iframe.src)) fireInitiateCheckout(); iframe.src = ParamManager.addFbParametersToUrl(iframe.src); } catch (error) { } 
+                            }); 
+                        }
+                        let mutationTimeout; 
+                        function setupMutationObserver() { 
+                            const observer = new MutationObserver(() => { 
+                                clearTimeout(mutationTimeout); 
+                                mutationTimeout = setTimeout(() => { if (isInitialized) { addParamsToLinks(); addParamsToForms(); if (!CONFIG.ignoreAllIframes) addParamsToIframes(); } }, 100); 
+                            }); 
+                            observer.observe(document.body, { subtree: true, childList: true }); 
+                        }
+                        function overrideWindowOpen() { 
+                            const originalWindowOpen = window.open; 
+                            window.open = function(url, name, specs) { 
+                                try { if (url && hasInitiateCheckoutParam(url.toString())) fireInitiateCheckout(); const processedUrl = url ? ParamManager.addFbParametersToUrl(url.toString()) : ''; return originalWindowOpen(processedUrl, name || '', specs || ''); } 
+                                catch (error) { return originalWindowOpen(url, name || '', specs || ''); } 
+                            }; 
+                        }
+                        function initialize() { 
+                            try { initializeFbParams(); if (isInitialized) { addParamsToLinks(); addParamsToForms(); if (!CONFIG.ignoreAllIframes) addParamsToIframes(); } } 
+                            catch (error) { } 
+                        }
+                        function forceRefresh() { currentParamCache = null; lastUrlParams = ''; isInitialized = false; initialize(); }
+                        function main() { 
+                            setTimeout(() => { 
+                                initialize(); setupMutationObserver(); overrideWindowOpen(); setupInitiateCheckoutListeners();
+                                let currentUrl = window.location.href; 
+                                setInterval(() => { if (window.location.href !== currentUrl) { currentUrl = window.location.href; checkCurrentPageForInitiateCheckout(); forceRefresh(); } }, 1000); 
+                                if (!CONFIG.ignoreScriptRetry) { setTimeout(() => { if (window.location.search !== lastUrlParams) forceRefresh(); else initialize(); }, 2000); setTimeout(initialize, 5000); }
+                            }, 2000);
+                        }
+                        if (CONFIG.fastStart || document.readyState === 'complete') main(); else window.addEventListener('load', main);
+                        window.TrackGO = { addFbParamsToUrl: ParamManager.addFbParametersToUrl.bind(ParamManager), getParameters: ParamManager.getFbParameters.bind(ParamManager), refresh: forceRefresh, forceSync: forceRefresh, generateShotgun: generateShotgunValue, checkInitiateCheckout: checkCurrentPageForInitiateCheckout, fireInitiateCheckout: fireInitiateCheckout, extractTargetUrl: extractTargetUrl };
+                    })();
+                `}
+            </Script>
         </div>
     )
 }

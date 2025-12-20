@@ -9,6 +9,8 @@ export interface CalculationResult {
     lucroLiquido: number
     margem: number
     isPrejuizo: boolean
+    status: 'danger' | 'warning' | 'healthy'
+    statusMessage: string
 }
 
 export function calculateProfit(data: ProductData): CalculationResult {
@@ -23,10 +25,33 @@ export function calculateProfit(data: ProductData): CalculationResult {
     // Margin percentage = (Net Profit / Sale Price) * 100
     const margem = precoVenda > 0 ? (lucroLiquido / precoVenda) * 100 : 0
 
+    // Determine status based on margin levels
+    let status: 'danger' | 'warning' | 'healthy'
+    let statusMessage: string
+
+    if (margem < 0) {
+        status = 'danger'
+        statusMessage = 'Você está PAGANDO para vender!'
+    } else if (margem === 0) {
+        status = 'danger'
+        statusMessage = 'Margem ZERO! Sem lucro nenhum.'
+    } else if (margem < 15) {
+        status = 'warning'
+        statusMessage = 'Margem baixa! Considere ajustar.'
+    } else if (margem < 30) {
+        status = 'healthy'
+        statusMessage = 'Margem aceitável para seu negócio.'
+    } else {
+        status = 'healthy'
+        statusMessage = 'Margem excelente! Parabéns!'
+    }
+
     return {
         lucroLiquido,
         margem,
-        isPrejuizo: lucroLiquido < 0
+        isPrejuizo: lucroLiquido <= 0,
+        status,
+        statusMessage
     }
 }
 
