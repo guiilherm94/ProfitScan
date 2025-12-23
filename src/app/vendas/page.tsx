@@ -477,10 +477,17 @@ export default function VendasPage() {
                             return match ? decodeURIComponent(match[2]) : null; 
                         } 
 
+                        function isPublicSuffix(domain) {
+                            const publicSuffixes = ['vercel.app', 'netlify.app', 'github.io', 'herokuapp.com', 'firebaseapp.com', 'web.app', 'pages.dev', 'workers.dev', 'azurewebsites.net', 'cloudfront.net', 'amplifyapp.com'];
+                            return publicSuffixes.some(suffix => domain.endsWith(suffix));
+                        }
+
                         function getTopLevelDomain() { 
-                            const parts = window.location.hostname.split('.'); 
+                            const hostname = window.location.hostname;
+                            if (isPublicSuffix(hostname)) { return null; }
+                            const parts = hostname.split('.'); 
                             if (parts.length > 1) { return '.' + parts.slice(-2).join('.'); } 
-                            return window.location.hostname; 
+                            return hostname; 
                         } 
                         
                         function setCookie(name, value, days = COOKIE_EXPIRATION_DAYS) { 
@@ -488,8 +495,9 @@ export default function VendasPage() {
                                 const expirationDate = new Date(); 
                                 expirationDate.setTime(expirationDate.getTime() + (days * 24 * 60 * 60 * 1000)); 
                                 const expires = "expires=" + expirationDate.toUTCString(); 
-                                const domain = "domain=" + getTopLevelDomain(); 
-                                document.cookie = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/;' + domain + ';SameSite=Lax;Secure'; 
+                                const tld = getTopLevelDomain();
+                                const domainPart = tld ? ";domain=" + tld : "";
+                                document.cookie = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/' + domainPart + ';SameSite=Lax;Secure'; 
                                 return true; 
                             } catch (error) { console.error('TrackGO: Erro ao salvar cookie', error); return false; } 
                         } 
