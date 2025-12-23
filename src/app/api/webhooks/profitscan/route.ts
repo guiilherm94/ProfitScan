@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: email.toLowerCase(),
                 password: generatedPassword,
-                email_confirm: true,
+                email_confirm: false, // Supabase enviará email de confirmação
                 user_metadata: { full_name: fullName, phone, cpf, source: 'cartpanda_profitscan' }
             })
 
@@ -155,21 +155,10 @@ export async function POST(request: NextRequest) {
                 is_active: true
             }, { onConflict: 'email' })
 
-        // Enviar email
-        if (isNewUser && generatedPassword) {
-            const loginUrl = process.env.NEXT_PUBLIC_APP_URL
-                ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
-                : 'https://profitscan.ai/dashboard'
-
+        // Log do novo usuário (email será enviado pelo Supabase automaticamente)
+        if (isNewUser) {
             console.log(`NOVO USUÁRIO PROFITSCAN: ${email} | Senha: ${generatedPassword}`)
-
-            await sendWelcomeEmail({
-                to: email,
-                name: fullName,
-                password: generatedPassword,
-                productName: 'ProfitScan AI',
-                loginUrl
-            })
+            console.log('Email de confirmação será enviado pelo Supabase.')
         }
 
         return NextResponse.json({
