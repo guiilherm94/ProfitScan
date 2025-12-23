@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-// @ts-expect-error pdf-parse doesn't have proper types
-import pdf from 'pdf-parse'
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -120,7 +118,11 @@ async function processImageInput(base64: string, mimeType: string, ingredientsLi
 // Process PDF input
 async function processPdfInput(buffer: Buffer, ingredientsList: string[]) {
     try {
-        const data = await pdf(buffer)
+        // Dynamic import to avoid Turbopack/Vercel build issues
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pdfParseModule = await import('pdf-parse') as any
+        const pdfParse = pdfParseModule.default || pdfParseModule
+        const data = await pdfParse(buffer)
         const text = data.text
 
         if (!text || text.trim().length < 10) {
