@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
     Zap, Store, Save, Loader2, ArrowLeft, CheckCircle,
-    Sparkles, Lock, Eye, EyeOff
+    Sparkles, Lock, Eye, EyeOff, ShoppingBag, ExternalLink,
+    Package, Calendar, CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
@@ -13,6 +14,18 @@ interface StoreProfile {
     store_name: string
     store_niche: string
     store_tone: string
+}
+
+interface UserAccess {
+    id: string
+    access_type: string
+    is_active: boolean
+    expires_at: string | null
+    created_at: string
+    order?: {
+        product_name: string
+        amount: number
+    }
 }
 
 const TONE_OPTIONS = [
@@ -55,6 +68,10 @@ export default function ConfiguracoesPage() {
     const [passwordSaved, setPasswordSaved] = useState(false)
     const [passwordError, setPasswordError] = useState('')
 
+    // User access state
+    const [userAccess, setUserAccess] = useState<UserAccess[]>([])
+    const [accessLoading, setAccessLoading] = useState(true)
+
     useEffect(() => {
         const loadProfile = async () => {
             const { data: { session } } = await supabase.auth.getSession()
@@ -78,6 +95,24 @@ export default function ConfiguracoesPage() {
                     store_tone: data.store_tone || 'Profissional e Empático'
                 })
             }
+
+            // Carregar acessos do usuário
+            const { data: accessData } = await supabase
+                .from('user_access')
+                .select(`
+                    id,
+                    access_type,
+                    is_active,
+                    expires_at,
+                    created_at,
+                    order:orders(product_name, amount)
+                `)
+                .eq('user_id', session.user.id)
+
+            if (accessData) {
+                setUserAccess(accessData as unknown as UserAccess[])
+            }
+            setAccessLoading(false)
 
             setLoading(false)
         }
@@ -375,6 +410,106 @@ export default function ConfiguracoesPage() {
                             )}
                         </button>
                     </div>
+                </div>
+
+                {/* My Account / Purchases Card */}
+                <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 md:p-8 mt-6">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                            <ShoppingBag className="w-6 h-6 text-cyan-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white">Minha Conta</h2>
+                            <p className="text-sm text-gray-500">Seus acessos e compras</p>
+                        </div>
+                    </div>
+
+                    {/* User Access List */}
+                    <div className="space-y-4 mb-6">
+                        {accessLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                            </div>
+                        ) : userAccess.length === 0 ? (
+                            <div className="text-center py-8">
+                                <Package className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                                <p className="text-gray-500">Nenhum produto adquirido ainda</p>
+                                <Link
+                                    href="/vendas"
+                                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-gradient-to-r from-[#00ff88] to-[#00d4ff] text-black font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity"
+                                >
+                                    Ver produtos disponíveis
+                                </Link>
+                            </div>
+                        ) : (
+                            userAccess.map((access) => (
+                                <div
+                                    key={access.id}
+                                    className={`p-4 rounded-xl border ${access.is_active
+                                            ? 'bg-green-500/5 border-green-500/20'
+                                            : 'bg-red-500/5 border-red-500/20'
+                                        }`}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${access.is_active
+                                                    ? 'bg-green-500/10'
+                                                    : 'bg-red-500/10'
+                                                }`}>
+                                                <Zap className={`w-5 h-5 ${access.is_active ? 'text-green-400' : 'text-red-400'
+                                                    }`} />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-white">
+                                                    {access.order?.product_name || 'ProfitScan AI'}
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${access.is_active
+                                                            ? 'bg-green-500/20 text-green-400'
+                                                            : 'bg-red-500/20 text-red-400'
+                                                        }`}>
+                                                        {access.is_active ? 'Ativo' : 'Inativo'}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {access.access_type === 'lifetime' ? 'Vitalício' : 'Assinatura'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {access.order?.amount && (
+                                            <span className="text-sm text-gray-400">
+                                                R$ {Number(access.order.amount).toFixed(2)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            Adquirido: {new Date(access.created_at).toLocaleDateString('pt-BR')}
+                                        </span>
+                                        {access.expires_at && (
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="w-3 h-3" />
+                                                Expira: {new Date(access.expires_at).toLocaleDateString('pt-BR')}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Manage Purchases Button */}
+                    <a
+                        href="https://pedidos.cartpanda.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-white/5 border border-white/10 text-gray-300 font-semibold rounded-xl hover:bg-white/10 hover:text-white transition-all"
+                    >
+                        <CreditCard className="w-5 h-5" />
+                        Gerenciar Compras e Assinaturas
+                        <ExternalLink className="w-4 h-4" />
+                    </a>
                 </div>
             </main>
         </div>

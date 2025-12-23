@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendWelcomeEmail } from '@/lib/email'
 
-// Supabase Admin Client
 const getSupabaseAdmin = () => {
     return createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +10,6 @@ const getSupabaseAdmin = () => {
     )
 }
 
-// Tipos do webhook CartPanda
 interface CartPandaCustomer {
     id: number
     first_name: string
@@ -46,8 +44,6 @@ interface CartPandaWebhook {
     order: CartPandaOrder
 }
 
-// Gerar senha aleatória segura
-// Senha padrão para novos usuários (pode ser alterada nas configurações)
 const DEFAULT_PASSWORD = 'senha123'
 
 export async function POST(request: NextRequest) {
@@ -61,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         const body: CartPandaWebhook = await request.json()
 
-        console.log('Webhook BLINDAGEM recebido:', body.event)
+        console.log('Webhook PROFITSCAN360 recebido:', body.event)
 
         if (body.event !== 'order.paid') {
             return NextResponse.json({ success: true, message: `Evento ${body.event} ignorado` })
@@ -70,17 +66,28 @@ export async function POST(request: NextRequest) {
         const { order } = body
         const customer = order.customer
         const email = customer?.email || order.email
-        const fullName = customer?.full_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim()
+        const fullName = customer?.full_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Cliente'
         const phone = customer?.phone || order.phone
         const cpf = customer?.cpf || ''
-        const productName = order.line_items?.[0]?.title || 'Blindagem de Reputação'
+        const productName = order.line_items?.[0]?.title || 'ProfitScan 360º'
         const productId = order.line_items?.[0]?.product_id
 
         if (!email) {
             return NextResponse.json({ error: 'Email não encontrado' }, { status: 400 })
         }
 
-        // Verificar/criar usuário (caso seja compra avulsa)
+        // Verificar se pedido já processado
+        const { data: existingOrder } = await supabaseAdmin
+            .from('orders')
+            .select('id')
+            .eq('cartpanda_order_id', order.id)
+            .single()
+
+        if (existingOrder) {
+            return NextResponse.json({ success: true, message: 'Pedido já processado' })
+        }
+
+        // Verificar/criar usuário
         const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
         const existingUser = existingUsers?.users?.find(u => u.email === email.toLowerCase())
 
@@ -91,19 +98,17 @@ export async function POST(request: NextRequest) {
         if (existingUser) {
             userId = existingUser.id
         } else {
-            // Criar usuário se não existir (compra avulsa do Blindagem)
             generatedPassword = DEFAULT_PASSWORD
 
-            // Usar createUser para criar usuário com email já confirmado
             const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: email.toLowerCase(),
                 password: generatedPassword,
-                email_confirm: true, // Email já confirmado automaticamente!
+                email_confirm: true,
                 user_metadata: {
                     full_name: fullName,
                     phone: phone,
                     cpf: cpf,
-                    source: 'cartpanda_blindagem'
+                    source: 'cartpanda_profitscan360'
                 }
             })
 
@@ -114,9 +119,8 @@ export async function POST(request: NextRequest) {
 
             userId = createData.user.id
             isNewUser = true
-            console.log(`NOVO USUÁRIO BLINDAGEM: ${email} | Nome: ${fullName}`)
+            console.log(`NOVO USUÁRIO PS360: ${email} | Nome: ${fullName}`)
 
-            // Enviar email customizado com credenciais
             const loginUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profitscan.ai'
             await sendWelcomeEmail({
                 to: email.toLowerCase(),
@@ -149,13 +153,12 @@ export async function POST(request: NextRequest) {
             .single()
 
         if (orderError) {
-            // Pode ser duplicado se orderbump veio junto com produto principal
-            console.log('Pedido pode já existir (orderbump):', orderError.message)
+            console.error('Erro ao salvar pedido:', orderError)
         }
 
-        // Liberar acesso Blindagem de Reputação
+        // Liberar acesso ProfitScan 360º
         const { error: accessError } = await supabaseAdmin
-            .from('reputation_access')
+            .from('ps360_access')
             .upsert({
                 user_id: userId,
                 email: email.toLowerCase(),
@@ -164,26 +167,25 @@ export async function POST(request: NextRequest) {
             }, { onConflict: 'email' })
 
         if (accessError) {
-            console.error('Erro ao liberar Blindagem:', accessError)
+            console.error('Erro ao liberar PS360:', accessError)
         }
 
-        console.log(`BLINDAGEM liberada para: ${email}`)
+        console.log(`PROFITSCAN 360º liberado para: ${email}`)
 
         return NextResponse.json({
             success: true,
-            message: 'Acesso Blindagem liberado',
-            product: 'blindagem',
-            isNewUser
+            message: isNewUser ? 'Usuário criado e acesso liberado' : 'Acesso liberado',
+            product: 'profitscan360'
         })
 
     } catch (error) {
-        console.error('Erro webhook Blindagem:', error)
+        console.error('Erro webhook ProfitScan360:', error)
         return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
     }
 }
 
 export async function GET() {
-    return NextResponse.json({ status: 'ok', product: 'blindagem', timestamp: new Date().toISOString() })
+    return NextResponse.json({ status: 'ok', product: 'profitscan360', timestamp: new Date().toISOString() })
 }
 
 export const dynamic = 'force-dynamic'

@@ -51,9 +51,12 @@ export default function BlindagemPage() {
                 .eq('is_active', true)
                 .single()
 
-            // Verificar acesso real (BYPASS_ACCESS = false para produção)
-            const BYPASS_ACCESS = false
-            setHasAccess(BYPASS_ACCESS || !!access)
+            // Se não tiver acesso, redireciona para o hub
+            if (!access) {
+                window.location.href = '/dashboard'
+                return
+            }
+            setHasAccess(true)
 
             // Carregar perfil da loja
             const { data: profile } = await supabase

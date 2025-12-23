@@ -104,28 +104,38 @@ export async function POST(request: NextRequest) {
         } else {
             generatedPassword = DEFAULT_PASSWORD
 
-            // Usar inviteUserByEmail para enviar email automaticamente
-            const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-                email.toLowerCase(),
-                {
-                    data: { full_name: fullName, phone, cpf, source: 'cartpanda_profitscan' }
+            // Usar createUser para criar usuário com email já confirmado
+            const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                email: email.toLowerCase(),
+                password: generatedPassword,
+                email_confirm: true, // Email já confirmado automaticamente!
+                user_metadata: {
+                    full_name: fullName,
+                    phone: phone,
+                    cpf: cpf,
+                    source: 'cartpanda_profitscan'
                 }
-            )
+            })
 
-            if (inviteError) {
-                console.error('Erro ao convidar usuário:', inviteError)
+            if (createError) {
+                console.error('Erro ao criar usuário:', createError)
                 return NextResponse.json({ error: 'Erro ao criar usuário' }, { status: 500 })
             }
 
-            userId = inviteData.user.id
-
-            // Definir a senha padrão para o usuário
-            await supabaseAdmin.auth.admin.updateUserById(userId, {
-                password: generatedPassword
-            })
-
+            userId = createData.user.id
             isNewUser = true
-            console.log(`NOVO USUÁRIO PROFITSCAN: ${email} | Email de convite enviado!`)
+            console.log(`NOVO USUÁRIO PROFITSCAN: ${email} | Nome: ${fullName}`)
+
+            // Enviar email customizado com credenciais
+            const loginUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profitscan.ai'
+            await sendWelcomeEmail({
+                to: email.toLowerCase(),
+                name: fullName,
+                password: generatedPassword,
+                productName: productName,
+                loginUrl: loginUrl
+            })
+            console.log('Email de boas-vindas enviado para:', email)
         }
 
         // Salvar pedido
