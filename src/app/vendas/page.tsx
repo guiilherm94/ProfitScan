@@ -464,7 +464,7 @@ export default function VendasPage() {
                         const ALL_PARAMS = [...URL_PARAMS, ...SHOTGUN_PARAMS];
                         const COOKIE_EXPIRATION_DAYS = 90; 
                         const INITIAL_DELAY = 3000;
-                        const MAX_WAIT_FOR_FBP = 10000;
+                        const MAX_WAIT_FOR_FBP = 5000;
                         const CHECK_INTERVAL = 200;
                         
                         let currentParamCache = null; 
@@ -472,9 +472,14 @@ export default function VendasPage() {
                         let isInitialized = false; 
 
                         function getCookie(name) { 
-                            const pattern = new RegExp('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-                            const match = document.cookie.match(pattern); 
-                            return match ? decodeURIComponent(match[2]) : null; 
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.startsWith(name + '=')) {
+                                    return decodeURIComponent(cookie.substring(name.length + 1));
+                                }
+                            }
+                            return null;
                         } 
 
                         function isPublicSuffix(domain) {
@@ -492,13 +497,18 @@ export default function VendasPage() {
                         
                         function setCookie(name, value, days = COOKIE_EXPIRATION_DAYS) { 
                             try { 
+                                if (!value) return false;
                                 const expirationDate = new Date(); 
                                 expirationDate.setTime(expirationDate.getTime() + (days * 24 * 60 * 60 * 1000)); 
                                 const expires = "expires=" + expirationDate.toUTCString(); 
                                 const tld = getTopLevelDomain();
                                 const domainPart = tld ? ";domain=" + tld : "";
-                                document.cookie = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/' + domainPart + ';SameSite=Lax;Secure'; 
-                                return true; 
+                                const cookieString = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/' + domainPart + ';SameSite=Lax;Secure';
+                                document.cookie = cookieString; 
+                                const saved = getCookie(name);
+                                if (saved) { console.log('TrackGO: Cookie salvo OK:', name, '=', value.substring(0, 30) + '...'); }
+                                else { console.warn('TrackGO: Cookie NÃO foi salvo:', name, '- String tentada:', cookieString.substring(0, 80)); }
+                                return !!saved; 
                             } catch (error) { console.error('TrackGO: Erro ao salvar cookie', error); return false; } 
                         } 
 
