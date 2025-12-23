@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+
 
 interface Tax {
     id: string
@@ -21,11 +21,10 @@ interface Tax {
 }
 
 export default function TaxasPage() {
-    const searchParams = useSearchParams()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [taxes, setTaxes] = useState<Tax[]>([])
-    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true')
+    const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
 

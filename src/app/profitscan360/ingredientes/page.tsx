@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+
 
 interface Ingredient {
     id: string
@@ -24,12 +24,11 @@ interface Ingredient {
 }
 
 export default function IngredientesPage() {
-    const searchParams = useSearchParams()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [ingredients, setIngredients] = useState<Ingredient[]>([])
     const [search, setSearch] = useState('')
-    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true')
+    const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
 
