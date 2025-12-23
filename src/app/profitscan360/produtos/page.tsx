@@ -6,7 +6,7 @@ import {
     Loader2, Home, Package, Percent, Building2, ShoppingBag,
     ArrowLeft, Settings, PieChart, Plus, Trash2,
     Edit2, X, Save, TrendingUp, DollarSign,
-    AlertTriangle, CheckCircle, Upload, Copy, Sparkles, RefreshCw
+    AlertTriangle, CheckCircle, Upload, Copy, Sparkles, RefreshCw, FileText
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -68,6 +68,8 @@ export default function ProdutosPage() {
     const [aiLoading, setAiLoading] = useState(false)
     const [recalculating, setRecalculating] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const [showTextInput, setShowTextInput] = useState(false)
+    const [recipeText, setRecipeText] = useState('')
 
     const [form, setForm] = useState({
         name: '',
@@ -287,6 +289,91 @@ export default function ProdutosPage() {
         } finally {
             setUploading(false)
             if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
+
+    // Process text input (copy-paste, Excel, etc.)
+    const handleTextRecipe = async () => {
+        if (!recipeText.trim()) {
+            alert('Cole ou digite o texto da receita')
+            return
+        }
+
+        setUploading(true)
+        try {
+            const res = await fetch('/api/profitscan360/extract-recipe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: recipeText,
+                    ingredients: ingredients
+                })
+            })
+
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+
+            // Set recipe name and yield
+            if (data.recipe_name && !form.name) {
+                setForm(f => ({ ...f, name: data.recipe_name }))
+            }
+            if (data.yield) {
+                setForm(f => ({ ...f, recipe_yield: data.yield }))
+            }
+
+            // Process ingredients
+            const newIngredients: ProductIngredient[] = []
+            const toCreate: { name: string; quantity: number; unit: string }[] = []
+
+            for (const ext of data.ingredients || []) {
+                if (ext.exists) {
+                    const found = ingredients.find(i => i.name.toLowerCase() === ext.name.toLowerCase())
+                    if (found) {
+                        newIngredients.push({ ingredient_id: found.id, quantity: ext.quantity })
+                    }
+                } else {
+                    toCreate.push({ name: ext.name, quantity: ext.quantity, unit: ext.unit })
+                }
+            }
+
+            // Create missing ingredients (without price)
+            for (const ing of toCreate) {
+                const { data: created } = await supabase
+                    .from('ps360_ingredients')
+                    .insert({
+                        name: ing.name,
+                        type: 'purchased',
+                        package_cost: 0,
+                        package_quantity: 1,
+                        unit: ing.unit || 'g',
+                        unit_cost: 0,
+                        yield_percentage: 100,
+                        user_id: user?.id
+                    })
+                    .select('id')
+                    .single()
+
+                if (created) {
+                    newIngredients.push({ ingredient_id: created.id, quantity: ing.quantity })
+                }
+            }
+
+            // Refresh ingredients list
+            await fetchData()
+
+            setForm(f => ({ ...f, ingredients: [...f.ingredients, ...newIngredients] }))
+            setRecipeText('')
+            setShowTextInput(false)
+
+            if (toCreate.length > 0) {
+                alert(`${toCreate.length} ingredientes novos foram criados SEM PREÇO. Você precisa definir o custo deles em Ingredientes.`)
+            }
+
+        } catch (error) {
+            console.error('Erro ao processar texto:', error)
+            alert(error instanceof Error ? error.message : 'Erro ao processar o texto')
+        } finally {
+            setUploading(false)
         }
     }
 
@@ -564,19 +651,64 @@ export default function ProdutosPage() {
                             </div>
 
                             <div className="p-6 space-y-4 max-h-[60vh] overflow-auto">
-                                {/* Upload de Receita */}
+                                {/* I.A. Recipe Extraction */}
                                 {form.type === 'manufactured' && (
-                                    <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-4">
-                                        <input type="file" ref={fileInputRef} onChange={handleUploadRecipe} accept="image/*,.pdf" className="hidden" />
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={uploading}
-                                            className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
-                                        >
-                                            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                                            {uploading ? 'Processando...' : 'Upload de Receita (Imagem/PDF)'}
-                                        </button>
-                                        <p className="text-xs text-gray-500 mt-1">A I.A. vai extrair os ingredientes automaticamente</p>
+                                    <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-cyan-400 font-medium flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4" />
+                                                Extração com I.A.
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setShowTextInput(false)}
+                                                    className={`px-3 py-1 text-xs rounded-lg transition-colors ${!showTextInput ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-500 hover:text-gray-300'}`}
+                                                >
+                                                    <Upload className="w-4 h-4 inline mr-1" />
+                                                    Arquivo
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowTextInput(true)}
+                                                    className={`px-3 py-1 text-xs rounded-lg transition-colors ${showTextInput ? 'bg-cyan-500/20 text-cyan-400' : 'text-gray-500 hover:text-gray-300'}`}
+                                                >
+                                                    <FileText className="w-4 h-4 inline mr-1" />
+                                                    Texto
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {!showTextInput ? (
+                                            <>
+                                                <input type="file" ref={fileInputRef} onChange={handleUploadRecipe} accept="image/*,.pdf" className="hidden" />
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    disabled={uploading}
+                                                    className="w-full py-3 border border-dashed border-cyan-500/50 rounded-xl text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                                                >
+                                                    {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                                                    {uploading ? 'Processando...' : 'Enviar Imagem ou PDF'}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <textarea
+                                                    value={recipeText}
+                                                    onChange={(e) => setRecipeText(e.target.value)}
+                                                    placeholder="Cole aqui o texto da receita, lista de ingredientes, células do Excel, ou qualquer formato de texto..."
+                                                    className="w-full h-32 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 resize-none text-sm"
+                                                />
+                                                <button
+                                                    onClick={handleTextRecipe}
+                                                    disabled={uploading || !recipeText.trim()}
+                                                    className="w-full py-3 bg-cyan-500/20 border border-cyan-500/50 rounded-xl text-cyan-400 hover:bg-cyan-500/30 disabled:opacity-50 flex items-center justify-center gap-2 font-medium transition-colors"
+                                                >
+                                                    {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                                                    {uploading ? 'Processando...' : 'Extrair Ingredientes'}
+                                                </button>
+                                            </>
+                                        )}
+
+                                        <p className="text-xs text-gray-500">A I.A. vai extrair nome, rendimento e ingredientes automaticamente</p>
                                     </div>
                                 )}
 
