@@ -472,7 +472,8 @@ export default function VendasPage() {
                         let isInitialized = false; 
 
                         function getCookie(name) { 
-                            const match = document.cookie.match('(^|;)\\\\s*' + name + '\\\\s*=\\\\s*([^;]+)'); 
+                            const pattern = new RegExp('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+                            const match = document.cookie.match(pattern); 
                             return match ? decodeURIComponent(match[2]) : null; 
                         } 
 
