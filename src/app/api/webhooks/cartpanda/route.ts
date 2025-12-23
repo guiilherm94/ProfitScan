@@ -116,26 +116,33 @@ export async function POST(request: NextRequest) {
             // Criar novo usuário
             generatedPassword = DEFAULT_PASSWORD
 
-            const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-                email: email.toLowerCase(),
-                password: generatedPassword,
-                email_confirm: false, // Supabase enviará email de confirmação
-                user_metadata: {
-                    full_name: fullName,
-                    phone: phone,
-                    cpf: cpf,
-                    source: 'cartpanda'
+            // Usar inviteUserByEmail para enviar email automaticamente
+            const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+                email.toLowerCase(),
+                {
+                    data: {
+                        full_name: fullName,
+                        phone: phone,
+                        cpf: cpf,
+                        source: 'cartpanda'
+                    }
                 }
-            })
+            )
 
-            if (createError) {
-                console.error('Erro ao criar usuário:', createError)
+            if (inviteError) {
+                console.error('Erro ao convidar usuário:', inviteError)
                 return NextResponse.json({ error: 'Erro ao criar usuário' }, { status: 500 })
             }
 
-            userId = newUser.user.id
+            userId = inviteData.user.id
+
+            // Definir a senha padrão para o usuário
+            await supabaseAdmin.auth.admin.updateUserById(userId, {
+                password: generatedPassword
+            })
+
             isNewUser = true
-            console.log('Novo usuário criado:', email)
+            console.log('Novo usuário criado e email de convite enviado:', email)
         }
 
         // 3. Salvar o pedido
@@ -212,12 +219,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 5. Enviar email de boas-vindas com credenciais
-        if (isNewUser && generatedPassword) {
-            const loginUrl = process.env.NEXT_PUBLIC_APP_URL
-                ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
-                : 'https://profitscan.ai/dashboard'
-
+        // Log do novo usuário (email já foi enviado pelo Supabase)
+        if (isNewUser) {
             console.log(`
         ========================================
         NOVO USUÁRIO CRIADO!
@@ -226,21 +229,9 @@ export async function POST(request: NextRequest) {
         Nome: ${fullName}
         Produto: ${productName}
         Valor: R$ ${order.total_price}
+        Email de convite enviado pelo Supabase!
         ========================================
             `)
-
-            // Enviar email com as credenciais
-            const emailResult = await sendWelcomeEmail({
-                to: email,
-                name: fullName,
-                password: generatedPassword,
-                productName: productName,
-                loginUrl: loginUrl
-            })
-
-            if (!emailResult.success) {
-                console.error('Falha ao enviar email de boas-vindas:', emailResult.error)
-            }
         }
 
         return NextResponse.json({

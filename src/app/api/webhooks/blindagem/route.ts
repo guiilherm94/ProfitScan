@@ -93,20 +93,29 @@ export async function POST(request: NextRequest) {
         } else {
             // Criar usuário se não existir (compra avulsa do Blindagem)
             generatedPassword = DEFAULT_PASSWORD
-            const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-                email: email.toLowerCase(),
-                password: generatedPassword,
-                email_confirm: false, // Supabase enviará email de confirmação
-                user_metadata: { full_name: fullName, phone, cpf, source: 'cartpanda_blindagem' }
-            })
 
-            if (createError) {
-                console.error('Erro ao criar usuário:', createError)
+            // Usar inviteUserByEmail para enviar email automaticamente
+            const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+                email.toLowerCase(),
+                {
+                    data: { full_name: fullName, phone, cpf, source: 'cartpanda_blindagem' }
+                }
+            )
+
+            if (inviteError) {
+                console.error('Erro ao convidar usuário:', inviteError)
                 return NextResponse.json({ error: 'Erro ao criar usuário' }, { status: 500 })
             }
 
-            userId = newUser.user.id
+            userId = inviteData.user.id
+
+            // Definir a senha padrão para o usuário
+            await supabaseAdmin.auth.admin.updateUserById(userId, {
+                password: generatedPassword
+            })
+
             isNewUser = true
+            console.log(`NOVO USUÁRIO BLINDAGEM: ${email} | Email de convite enviado!`)
         }
 
         // Salvar pedido
@@ -149,23 +158,6 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(`BLINDAGEM liberada para: ${email}`)
-
-        // Enviar email se for novo usuário
-        if (isNewUser && generatedPassword) {
-            const loginUrl = process.env.NEXT_PUBLIC_APP_URL
-                ? `${process.env.NEXT_PUBLIC_APP_URL}/blindagem`
-                : 'https://profitscan.ai/blindagem'
-
-            console.log(`NOVO USUÁRIO BLINDAGEM: ${email} | Senha: ${generatedPassword}`)
-
-            await sendWelcomeEmail({
-                to: email,
-                name: fullName,
-                password: generatedPassword,
-                productName: 'Blindagem de Reputação',
-                loginUrl
-            })
-        }
 
         return NextResponse.json({
             success: true,

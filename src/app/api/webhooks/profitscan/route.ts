@@ -103,20 +103,29 @@ export async function POST(request: NextRequest) {
             userId = existingUser.id
         } else {
             generatedPassword = DEFAULT_PASSWORD
-            const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-                email: email.toLowerCase(),
-                password: generatedPassword,
-                email_confirm: false, // Supabase enviará email de confirmação
-                user_metadata: { full_name: fullName, phone, cpf, source: 'cartpanda_profitscan' }
-            })
 
-            if (createError) {
-                console.error('Erro ao criar usuário:', createError)
+            // Usar inviteUserByEmail para enviar email automaticamente
+            const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+                email.toLowerCase(),
+                {
+                    data: { full_name: fullName, phone, cpf, source: 'cartpanda_profitscan' }
+                }
+            )
+
+            if (inviteError) {
+                console.error('Erro ao convidar usuário:', inviteError)
                 return NextResponse.json({ error: 'Erro ao criar usuário' }, { status: 500 })
             }
 
-            userId = newUser.user.id
+            userId = inviteData.user.id
+
+            // Definir a senha padrão para o usuário
+            await supabaseAdmin.auth.admin.updateUserById(userId, {
+                password: generatedPassword
+            })
+
             isNewUser = true
+            console.log(`NOVO USUÁRIO PROFITSCAN: ${email} | Email de convite enviado!`)
         }
 
         // Salvar pedido
