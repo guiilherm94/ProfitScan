@@ -31,11 +31,9 @@ interface User {
     email: string
     name: string
     created_at: string
-    ps360_access: Array<{
-        is_active: boolean
-        expires_at: string
-        ai_scans_used: number
-    }>
+    detector_access: { is_active: boolean; expires_at?: string } | null
+    ps360_access: { is_active: boolean; expires_at?: string; ai_scans_used?: number } | null
+    reputation_access: { is_active: boolean } | null
 }
 
 interface AISettings {
@@ -162,14 +160,27 @@ export default function AdminPage() {
         fetchStats()
     }
 
-    async function updateUserAccess(userId: string, email: string, action: 'grant_access' | 'revoke_access' | 'reset_scans') {
-        await fetch('/api/admin/users', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, email, action })
-        })
+    async function manageProductAccess(userId: string, email: string, product: 'detector' | 'ps360' | 'reputation', action: 'grant' | 'revoke' | 'reset_scans') {
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, email, product, action })
+            })
 
-        fetchUsers()
+            const data = await res.json()
+
+            if (!res.ok) {
+                alert(`Erro: ${data.error || 'Falha na operação'}`)
+                return
+            }
+
+            alert(data.message || 'Operação realizada com sucesso!')
+            fetchUsers()
+        } catch (error) {
+            console.error('Erro ao gerenciar acesso:', error)
+            alert('Erro ao conectar com o servidor')
+        }
     }
 
     async function updateAIProvider(provider: string) {
@@ -384,83 +395,111 @@ export default function AdminPage() {
                         </div>
 
                         {/* Tabela de usuários */}
-                        <div className="bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
-                            <table className="w-full">
+                        <div className="bg-[#111] border border-gray-800 rounded-xl overflow-hidden overflow-x-auto">
+                            <table className="w-full min-w-[800px]">
                                 <thead className="bg-gray-900">
                                     <tr>
                                         <th className="text-left px-4 py-3 text-sm text-gray-400">Usuário</th>
-                                        <th className="text-left px-4 py-3 text-sm text-gray-400">Status PS360</th>
-                                        <th className="text-left px-4 py-3 text-sm text-gray-400">Scans Usados</th>
-                                        <th className="text-left px-4 py-3 text-sm text-gray-400">Expira em</th>
+                                        <th className="text-center px-3 py-3 text-sm text-gray-400">Detector</th>
+                                        <th className="text-center px-3 py-3 text-sm text-gray-400">PS360</th>
+                                        <th className="text-center px-3 py-3 text-sm text-gray-400">Blindagem</th>
+                                        <th className="text-center px-3 py-3 text-sm text-gray-400">Scans IA</th>
                                         <th className="text-right px-4 py-3 text-sm text-gray-400">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {users.map(user => {
-                                        const access = user.ps360_access?.[0]
-                                        return (
-                                            <tr key={user.id} className="border-t border-gray-800 hover:bg-gray-900/50">
-                                                <td className="px-4 py-3">
-                                                    <p className="font-medium">{user.name || user.email.split('@')[0]}</p>
-                                                    <p className="text-sm text-gray-500">{user.email}</p>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {access?.is_active ? (
-                                                        <span className="px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full">
-                                                            Ativo
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-2 py-1 bg-gray-500/20 text-gray-500 text-xs rounded-full">
-                                                            Inativo
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-300">
-                                                    {access?.ai_scans_used || 0}/50
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-400 text-sm">
-                                                    {access?.expires_at
-                                                        ? new Date(access.expires_at).toLocaleDateString('pt-BR')
-                                                        : '-'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        {access?.is_active ? (
-                                                            <button
-                                                                onClick={() => updateUserAccess(user.id, user.email, 'revoke_access')}
-                                                                className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg"
-                                                                title="Revogar acesso"
-                                                            >
-                                                                <ShieldOff className="w-4 h-4" />
-                                                            </button>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => updateUserAccess(user.id, user.email, 'grant_access')}
-                                                                className="p-2 text-green-500 hover:bg-green-500/20 rounded-lg"
-                                                                title="Liberar acesso"
-                                                            >
-                                                                <Shield className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => updateUserAccess(user.id, user.email, 'reset_scans')}
-                                                            className="p-2 text-blue-500 hover:bg-blue-500/20 rounded-lg"
-                                                            title="Resetar scans"
-                                                        >
-                                                            <RefreshCw className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteUser(user.id)}
-                                                            className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg"
-                                                            title="Excluir usuário"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
+                                    {users.map(user => (
+                                        <tr key={user.id} className="border-t border-gray-800 hover:bg-gray-900/50">
+                                            <td className="px-4 py-3">
+                                                <p className="font-medium">{user.name || user.email.split('@')[0]}</p>
+                                                <p className="text-sm text-gray-500">{user.email}</p>
+                                            </td>
+                                            {/* Detector */}
+                                            <td className="px-3 py-3 text-center">
+                                                {user.detector_access?.is_active ? (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'detector', 'revoke')}
+                                                        className="px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full hover:bg-red-500/20 hover:text-red-500"
+                                                        title="Clique para revogar"
+                                                    >
+                                                        ✓ Ativo
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'detector', 'grant')}
+                                                        className="px-2 py-1 bg-gray-500/20 text-gray-500 text-xs rounded-full hover:bg-green-500/20 hover:text-green-500"
+                                                        title="Clique para liberar"
+                                                    >
+                                                        Liberar
+                                                    </button>
+                                                )}
+                                            </td>
+                                            {/* PS360 */}
+                                            <td className="px-3 py-3 text-center">
+                                                {user.ps360_access?.is_active ? (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'ps360', 'revoke')}
+                                                        className="px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full hover:bg-red-500/20 hover:text-red-500"
+                                                        title="Clique para revogar"
+                                                    >
+                                                        ✓ Ativo
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'ps360', 'grant')}
+                                                        className="px-2 py-1 bg-gray-500/20 text-gray-500 text-xs rounded-full hover:bg-green-500/20 hover:text-green-500"
+                                                        title="Clique para liberar (1 ano)"
+                                                    >
+                                                        Liberar
+                                                    </button>
+                                                )}
+                                            </td>
+                                            {/* Blindagem */}
+                                            <td className="px-3 py-3 text-center">
+                                                {user.reputation_access?.is_active ? (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'reputation', 'revoke')}
+                                                        className="px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full hover:bg-red-500/20 hover:text-red-500"
+                                                        title="Clique para revogar"
+                                                    >
+                                                        ✓ Ativo
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'reputation', 'grant')}
+                                                        className="px-2 py-1 bg-gray-500/20 text-gray-500 text-xs rounded-full hover:bg-green-500/20 hover:text-green-500"
+                                                        title="Clique para liberar"
+                                                    >
+                                                        Liberar
+                                                    </button>
+                                                )}
+                                            </td>
+                                            {/* Scans IA */}
+                                            <td className="px-3 py-3 text-center text-gray-300">
+                                                {user.ps360_access ? (
+                                                    <button
+                                                        onClick={() => manageProductAccess(user.id, user.email, 'ps360', 'reset_scans')}
+                                                        className="text-sm hover:text-blue-400"
+                                                        title="Clique para resetar"
+                                                    >
+                                                        {user.ps360_access.ai_scans_used || 0}/50
+                                                    </button>
+                                                ) : '-'}
+                                            </td>
+                                            {/* Ações */}
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => deleteUser(user.id)}
+                                                        className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg"
+                                                        title="Excluir usuário"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
 

@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@supabase/supabase-js'
+
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+// Initialize AI clients
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY || '' })
+
+interface AIConfig {
+    currentProvider: string
+    fallbackEnabled: boolean
+    fallbackProvider: string
+}
 
 const SYSTEM_PROMPT = `Você é um consultor financeiro especialista em micro e pequenos negócios brasileiros, especialmente MEIs.
 
@@ -23,30 +39,108 @@ REGRAS:
 - Inclua números específicos quando possível (ex: "aumente R$2 no preço" ou "margem deveria ser pelo menos 30%")
 - Considere que o usuário é MEI com recursos limitados`
 
+// Get AI configuration from database
+async function getAIConfig(): Promise<AIConfig> {
+    try {
+        const { data } = await supabaseAdmin
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'ai_config')
+            .single()
+
+        return data?.value || {
+            currentProvider: 'gemini-2.0-flash-lite',
+            fallbackEnabled: true,
+            fallbackProvider: 'gpt5-nano'
+        }
+    } catch {
+        return {
+            currentProvider: 'gemini-2.0-flash-lite',
+            fallbackEnabled: true,
+            fallbackProvider: 'gpt5-nano'
+        }
+    }
+}
+
+// Call OpenAI GPT-5 nano
+async function callOpenAI(prompt: string): Promise<string> {
+    console.log('🤖 [Analyze] Usando GPT-5 nano')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (openai.responses as any).create({
+        model: 'gpt-5-nano',
+        input: [
+            { type: 'message', role: 'developer', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
+            { type: 'message', role: 'user', content: [{ type: 'input_text', text: prompt }] }
+        ],
+        reasoning: { effort: 'minimal' },
+        text: { verbosity: 'low' },
+        max_output_tokens: 500
+    })
+
+    return response.output_text || ''
+}
+
+// Call Gemini model
+async function callGeminiModel(prompt: string, modelId: string): Promise<string> {
+    console.log(`🤖 [Analyze] Usando ${modelId}`)
+
+    const response = await gemini.models.generateContent({
+        model: modelId,
+        contents: [{ text: `${SYSTEM_PROMPT}\n\n${prompt}` }]
+    })
+
+    return response.text || ''
+}
+
+// Map provider names to Gemini model IDs
+const GEMINI_MODEL_IDS: Record<string, string> = {
+    'gemini-2.0-flash': 'gemini-2.0-flash',
+    'gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
+    'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite'
+}
+
+// Call the appropriate AI model
+async function callAIModel(provider: string, prompt: string): Promise<string> {
+    if (provider === 'gpt5-nano') {
+        return await callOpenAI(prompt)
+    } else if (GEMINI_MODEL_IDS[provider]) {
+        return await callGeminiModel(prompt, GEMINI_MODEL_IDS[provider])
+    } else {
+        console.warn(`⚠️ Unknown provider: ${provider}, defaulting to gpt5-nano`)
+        return await callOpenAI(prompt)
+    }
+}
+
+// Process with fallback
+async function processWithFallback(prompt: string, aiConfig: AIConfig): Promise<{ content: string; providerUsed: string }> {
+    let providerUsed = aiConfig.currentProvider
+
+    try {
+        const content = await callAIModel(aiConfig.currentProvider, prompt)
+        return { content, providerUsed }
+    } catch (primaryError) {
+        console.error('❌ [Analyze] Erro no provider principal:', primaryError)
+
+        if (aiConfig.fallbackEnabled && aiConfig.fallbackProvider) {
+            console.log(`🔄 [Analyze] Tentando fallback: ${aiConfig.fallbackProvider}`)
+            providerUsed = aiConfig.fallbackProvider
+
+            try {
+                const content = await callAIModel(aiConfig.fallbackProvider, prompt)
+                return { content, providerUsed }
+            } catch (fallbackError) {
+                console.error('❌ [Analyze] Erro no fallback:', fallbackError)
+                throw fallbackError
+            }
+        } else {
+            throw primaryError
+        }
+    }
+}
+
 export async function POST(request: NextRequest) {
     try {
-        // Check for required environment variables
-        const openaiKey = process.env.OPENAI_API_KEY
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-        if (!openaiKey) {
-            return NextResponse.json(
-                { error: 'OPENAI_API_KEY não configurada' },
-                { status: 500 }
-            )
-        }
-
-        if (!supabaseUrl || !supabaseKey) {
-            return NextResponse.json(
-                { error: 'Supabase não configurado' },
-                { status: 500 }
-            )
-        }
-
-        const openai = new OpenAI({ apiKey: openaiKey })
-        const supabase = createClient(supabaseUrl, supabaseKey)
-
         const body = await request.json()
         const { produto, custoProducao, precoVenda, custosFixos, margem, lucro, isPrejuizo, status, statusMessage } = body
 
@@ -54,6 +148,10 @@ export async function POST(request: NextRequest) {
         if (!produto || precoVenda <= 0) {
             return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
         }
+
+        // Get AI configuration
+        const aiConfig = await getAIConfig()
+        console.log('📊 [Analyze] Provider:', aiConfig.currentProvider)
 
         // Prepare user message for AI with more context
         const margemIdealSugestao = margem < 0 ? 'PREJUÍZO GRAVE' : margem < 15 ? 'MUITO BAIXA' : margem < 25 ? 'ABAIXO DO IDEAL' : margem < 40 ? 'ACEITÁVEL' : 'BOA'
@@ -70,31 +168,21 @@ Situação: ${isPrejuizo ? 'PREJUÍZO - URGENTE!' : margem < 15 ? 'MARGEM BAIXA 
 
 Analise este produto e me dê sua consultoria especializada.`
 
-        // Call OpenAI API
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user', content: userMessage }
-            ],
-            max_tokens: 300,
-            temperature: 0.7
-        })
+        // Process with AI
+        const result = await processWithFallback(userMessage, aiConfig)
+        console.log('✅ [Analyze] Processado com:', result.providerUsed)
 
-
-        const aiAnalysis = completion.choices[0]?.message?.content || 'Erro ao gerar análise.'
-
-        // Get auth header for user identification
-        const authHeader = request.headers.get('cookie')
-
-        // Try to save to history if we have auth
+        // Save to history if possible
         try {
+            const supabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            )
             const { data: { session } } = await supabase.auth.getSession()
 
             if (session) {
                 const userId = session.user.id
 
-                // Insert new history entry
                 await supabase.from('history').insert({
                     user_id: userId,
                     produto,
@@ -102,20 +190,17 @@ Analise este produto e me dê sua consultoria especializada.`
                     preco_venda: precoVenda,
                     custos_fixos: custosFixos,
                     margem,
-                    resposta_ia: aiAnalysis
+                    resposta_ia: result.content
                 })
 
-                // Check if user has more than 100 entries
+                // Limit to 100 entries per user
                 const { count } = await supabase
                     .from('history')
                     .select('*', { count: 'exact', head: true })
                     .eq('user_id', userId)
 
-                // If more than 100, delete the oldest entries
                 if (count && count > 100) {
                     const entriesToDelete = count - 100
-
-                    // Get the oldest entries to delete
                     const { data: oldestEntries } = await supabase
                         .from('history')
                         .select('id')
@@ -125,49 +210,24 @@ Analise este produto e me dê sua consultoria especializada.`
 
                     if (oldestEntries && oldestEntries.length > 0) {
                         const idsToDelete = oldestEntries.map(e => e.id)
-                        await supabase
-                            .from('history')
-                            .delete()
-                            .in('id', idsToDelete)
+                        await supabase.from('history').delete().in('id', idsToDelete)
                     }
                 }
             }
         } catch (historyError) {
-            // Don't fail if history save fails
             console.error('Failed to save history:', historyError)
         }
 
-        return NextResponse.json({ analysis: aiAnalysis })
+        return NextResponse.json({
+            analysis: result.content,
+            provider_used: result.providerUsed
+        })
 
     } catch (error) {
-        console.error('API Error:', error)
-
-        // Extract meaningful error message
-        let errorMessage = 'Erro ao processar análise'
-        if (error instanceof Error) {
-            errorMessage = error.message
-            console.error('Error details:', error.message)
-        }
-
-        // Check for OpenAI specific errors
-        if (error && typeof error === 'object' && 'status' in error) {
-            const apiError = error as { status: number; message?: string }
-            console.error('API Status:', apiError.status)
-            if (apiError.status === 401) {
-                errorMessage = 'Chave da OpenAI inválida ou expirada'
-            } else if (apiError.status === 429) {
-                errorMessage = 'Limite de requisições atingido. Tente novamente em alguns segundos.'
-            } else if (apiError.status === 500) {
-                errorMessage = 'Erro no servidor da OpenAI. Tente novamente.'
-            }
-        }
-
-        return NextResponse.json(
-            { error: errorMessage },
-            { status: 500 }
-        )
+        console.error('❌ [Analyze] Erro:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao processar análise'
+        return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
 }
 
-// Force dynamic rendering (prevents build-time errors)
 export const dynamic = 'force-dynamic'
