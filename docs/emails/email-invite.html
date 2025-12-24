@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Defina sua senha - ProfitScan AI</title>
+    <title>Acesso Liberado - ProfitScan AI</title>
 </head>
 
 <body
@@ -44,7 +44,7 @@
                                 <tr>
                                     <td
                                         style="background: rgba(34, 197, 94, 0.15); width: 80px; height: 80px; border-radius: 50%; text-align: center; vertical-align: middle;">
-                                        <span style="font-size: 40px;">🔐</span>
+                                        <span style="font-size: 40px;">🎉</span>
                                     </td>
                                 </tr>
                             </table>
@@ -65,22 +65,41 @@
                         <td style="padding: 10px 40px 20px 40px; text-align: center;">
                             <p style="margin: 0; font-size: 16px; color: #9ca3af; line-height: 1.6;">
                                 Seu acesso ao <span style="color: #22c55e; font-weight: 600;">ProfitScan AI</span> está
-                                garantido. Para começar, você precisa criar uma senha segura.
+                                liberado! Use as credenciais abaixo para fazer login.
                             </p>
                         </td>
                     </tr>
 
-                    <!-- Box Informativo -->
+                    <!-- Box com Credenciais -->
                     <tr>
-                        <td style="padding: 0 40px 30px 40px;">
+                        <td style="padding: 0 40px 20px 40px;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-                                style="background: rgba(255,255,255,0.03); border-radius: 12px;">
+                                style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 12px;">
                                 <tr>
-                                    <td style="padding: 20px; text-align: center;">
-                                        <p style="margin: 0; font-size: 14px; color: #e5e7eb;">
-                                            Clique no botão abaixo para definir sua senha e acessar a plataforma
-                                            imediatamente.
+                                    <td style="padding: 24px;">
+                                        <p style="margin: 0 0 16px 0; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">
+                                            Seus dados de acesso:
                                         </p>
+                                        
+                                        <!-- Email -->
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 12px;">
+                                            <tr>
+                                                <td style="font-size: 14px; color: #9ca3af;">Email:</td>
+                                                <td style="text-align: right;">
+                                                    <span style="font-size: 14px; font-weight: 600; color: #ffffff;">{{ .Email }}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <!-- Senha -->
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr>
+                                                <td style="font-size: 14px; color: #9ca3af;">Senha:</td>
+                                                <td style="text-align: right;">
+                                                    <code style="background: #222; color: #22c55e; padding: 6px 14px; border-radius: 6px; font-size: 16px; font-weight: 700; letter-spacing: 1px;">senha123</code>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
@@ -94,14 +113,23 @@
                                 style="margin: 0 auto;">
                                 <tr>
                                     <td
-                                        style="border-radius: 12px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);">
-                                        <a href="{{ .ConfirmationURL }}" target="_blank"
+                                        style="border-radius: 12px; background: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%); box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);">
+                                        <a href="{{ .SiteURL }}" target="_blank"
                                             style="display: inline-block; padding: 18px 48px; font-size: 16px; font-weight: 700; color: #000000; text-decoration: none; letter-spacing: 0.5px;">
-                                            🔑 CRIAR MINHA SENHA
+                                            ⚡ ACESSAR AGORA
                                         </a>
                                     </td>
                                 </tr>
                             </table>
+                        </td>
+                    </tr>
+
+                    <!-- Aviso de segurança -->
+                    <tr>
+                        <td style="padding: 0 40px 30px 40px; text-align: center;">
+                            <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
+                                🔒 Recomendamos alterar sua senha após o primeiro acesso em <strong>Configurações</strong>.
+                            </p>
                         </td>
                     </tr>
 
@@ -113,24 +141,6 @@
                                     <td style="border-top: 1px solid rgba(255,255,255,0.1);"></td>
                                 </tr>
                             </table>
-                        </td>
-                    </tr>
-
-                    <!-- Link alternativo -->
-                    <tr>
-                        <td style="padding: 25px 40px 10px 40px; text-align: center;">
-                            <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
-                                Se o botão não funcionar, copie e cole este link:
-                            </p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td style="padding: 5px 40px 30px 40px; text-align: center;">
-                            <p
-                                style="margin: 0; font-size: 12px; color: #22c55e; word-break: break-all; background: rgba(34, 197, 94, 0.1); padding: 12px; border-radius: 8px;">
-                                {{ .ConfirmationURL }}
-                            </p>
                         </td>
                     </tr>
 
