@@ -129,46 +129,53 @@ function markExistingIngredients(extracted: { ingredients?: { name: string; quan
     }
 }
 
-// Process with GPT-5 nano
+// Process with GPT-5 nano using Responses API
 async function callOpenAI(prompt: string, imageBase64?: string): Promise<string> {
-    const messages: OpenAI.ChatCompletionMessageParam[] = [
-        { role: 'system', content: prompt }
+    console.log('🔍 [OpenAI Request] Sending request to GPT-5 nano via Responses API...')
+
+    // Build input for Responses API (using any for compatibility with new API)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const input: any[] = [
+        {
+            type: 'message',
+            role: 'developer',
+            content: [{ type: 'input_text', text: prompt }]
+        }
     ]
 
     if (imageBase64) {
-        messages.push({
+        const imageUrl = imageBase64.startsWith('data:')
+            ? imageBase64
+            : `data:image/jpeg;base64,${imageBase64}`
+
+        input.push({
+            type: 'message',
             role: 'user',
             content: [
-                {
-                    type: 'image_url',
-                    image_url: {
-                        url: imageBase64.startsWith('data:')
-                            ? imageBase64
-                            : `data:image/jpeg;base64,${imageBase64}`,
-                        detail: 'low' // Use low detail to reduce tokens
-                    }
-                },
-                { type: 'text', text: 'Extraia os ingredientes desta receita e retorne apenas o JSON.' }
+                { type: 'input_image', image_url: imageUrl, detail: 'low' },
+                { type: 'input_text', text: 'Extraia os ingredientes desta receita e retorne apenas o JSON.' }
             ]
         })
     } else {
-        messages.push({
+        input.push({
+            type: 'message',
             role: 'user',
-            content: 'Extraia os ingredientes da receita informada e retorne apenas o JSON.'
+            content: [{ type: 'input_text', text: 'Extraia os ingredientes da receita informada e retorne apenas o JSON.' }]
         })
     }
 
-    console.log('🔍 [OpenAI Request] Sending request to GPT-5 nano...')
-
-    const response = await openai.chat.completions.create({
+    // Use Responses API with GPT-5-nano optimized settings
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (openai.responses as any).create({
         model: 'gpt-5-nano',
-        messages,
-        max_completion_tokens: 16000, // Increased significantly for reasoning models
-        response_format: { type: 'json_object' }
+        input,
+        reasoning: { effort: 'minimal' }, // GPT-5-nano supports: minimal, low, medium, high
+        text: { verbosity: 'low' },     // Concise responses
+        max_output_tokens: 4000
     })
 
-    const content = response.choices[0]?.message?.content || ''
-    console.log('🔍 [OpenAI Response] Finish reason:', response.choices[0]?.finish_reason)
+    // Extract text content from response
+    const content = response.output_text || ''
     console.log('🔍 [OpenAI Response] Content length:', content.length)
     console.log('🔍 [OpenAI Response] First 500 chars:', content.substring(0, 500))
 
