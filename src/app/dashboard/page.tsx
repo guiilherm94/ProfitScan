@@ -130,8 +130,8 @@ export default function DashboardPage() {
 
                     {/* ProfitScan 360º - NOVO e Destaque */}
                     <div className={`relative rounded-2xl border overflow-hidden transition-all md:col-span-2 lg:col-span-1 ${access.profitscan360
-                            ? 'bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border-orange-500/30 hover:border-orange-500/50'
-                            : 'bg-[#111] border-white/10 hover:border-white/20'
+                        ? 'bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border-orange-500/30 hover:border-orange-500/50'
+                        : 'bg-[#111] border-white/10 hover:border-white/20'
                         }`}>
                         {/* NEW Badge */}
                         <div className="absolute top-4 left-4">
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                                     className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-black font-bold rounded-xl hover:opacity-90 transition-opacity"
                                 >
                                     <ShoppingBag className="w-5 h-5" />
-                                    ADQUIRIR POR R$ 47,00
+                                    ADQUIRIR POR R$ 29,90
                                 </a>
                             )}
                         </div>
@@ -198,8 +198,8 @@ export default function DashboardPage() {
 
                     {/* ProfitScan Detector */}
                     <div className={`relative rounded-2xl border overflow-hidden transition-all ${access.profitscanDetector
-                            ? 'bg-gradient-to-br from-[#00ff88]/5 to-[#00d4ff]/5 border-[#00ff88]/30 hover:border-[#00ff88]/50'
-                            : 'bg-[#111] border-white/10 hover:border-white/20'
+                        ? 'bg-gradient-to-br from-[#00ff88]/5 to-[#00d4ff]/5 border-[#00ff88]/30 hover:border-[#00ff88]/50'
+                        : 'bg-[#111] border-white/10 hover:border-white/20'
                         }`}>
                         {/* Status Badge */}
                         <div className="absolute top-4 right-4">
@@ -259,8 +259,8 @@ export default function DashboardPage() {
 
                     {/* Blindagem Module */}
                     <div className={`relative rounded-2xl border overflow-hidden transition-all ${access.blindagem
-                            ? 'bg-gradient-to-br from-purple-500/5 to-pink-500/5 border-purple-500/30 hover:border-purple-500/50'
-                            : 'bg-[#111] border-white/10 hover:border-white/20'
+                        ? 'bg-gradient-to-br from-purple-500/5 to-pink-500/5 border-purple-500/30 hover:border-purple-500/50'
+                        : 'bg-[#111] border-white/10 hover:border-white/20'
                         }`}>
                         {/* Status Badge */}
                         <div className="absolute top-4 right-4">

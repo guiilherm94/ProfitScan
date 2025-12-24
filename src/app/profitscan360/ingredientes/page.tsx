@@ -23,14 +23,26 @@ interface Ingredient {
     notes: string | null
 }
 
+interface Unit {
+    id: string
+    user_id: string | null
+    symbol: string
+    name: string
+    is_global: boolean
+}
+
 export default function IngredientesPage() {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [ingredients, setIngredients] = useState<Ingredient[]>([])
+    const [units, setUnits] = useState<Unit[]>([])
     const [search, setSearch] = useState('')
     const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
+    const [showNewUnitModal, setShowNewUnitModal] = useState(false)
+    const [newUnitSymbol, setNewUnitSymbol] = useState('')
+    const [newUnitName, setNewUnitName] = useState('')
 
     // Form state
     const [form, setForm] = useState({
@@ -49,6 +61,16 @@ export default function IngredientesPage() {
             .select('*')
             .order('name')
         setIngredients(data || [])
+    }, [])
+
+    const fetchUnits = useCallback(async (userId: string) => {
+        try {
+            const res = await fetch(`/api/profitscan360/units?user_id=${userId}`)
+            const data = await res.json()
+            if (Array.isArray(data)) setUnits(data)
+        } catch (error) {
+            console.error('Erro ao buscar unidades:', error)
+        }
     }, [])
 
     useEffect(() => {
@@ -82,6 +104,7 @@ export default function IngredientesPage() {
 
             setUser(session.user)
             await fetchIngredients()
+            await fetchUnits(session.user.id)
             setLoading(false)
         }
         init()
@@ -164,7 +187,41 @@ export default function IngredientesPage() {
         await fetchIngredients()
     }
 
-    const filteredIngredients = ingredients.filter(i =>
+    const handleCreateUnit = async () => {
+        if (!newUnitSymbol.trim() || !newUnitName.trim()) {
+            alert('Preencha símbolo e nome da unidade')
+            return
+        }
+        if (!user) return
+
+        try {
+            const res = await fetch('/api/profitscan360/units', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    symbol: newUnitSymbol.trim(),
+                    name: newUnitName.trim()
+                })
+            })
+
+            if (res.ok) {
+                await fetchUnits(user.id)
+                setNewUnitSymbol('')
+                setNewUnitName('')
+                setShowNewUnitModal(false)
+                setForm({ ...form, unit: newUnitSymbol.trim() })
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Erro ao criar unidade')
+            }
+        } catch (error) {
+            console.error('Erro ao criar unidade:', error)
+            alert('Erro ao criar unidade')
+        }
+    }
+
+    const filteredIngredients = ingredients.filter((i: Ingredient) =>
         i.name.toLowerCase().includes(search.toLowerCase())
     )
 
@@ -327,17 +384,26 @@ export default function IngredientesPage() {
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm text-gray-400 mb-2">Unidade</label>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="text-sm text-gray-400">Unidade</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowNewUnitModal(true)}
+                                                        className="text-xs text-orange-400 hover:text-orange-300"
+                                                    >
+                                                        + Nova
+                                                    </button>
+                                                </div>
                                                 <select
                                                     value={form.unit}
                                                     onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-orange-500/50"
+                                                    className="w-full px-4 py-3 bg-gray-900 border border-white/10 rounded-xl text-white focus:outline-none focus:border-orange-500/50"
                                                 >
-                                                    <option value="kg">Quilograma (kg)</option>
-                                                    <option value="g">Grama (g)</option>
-                                                    <option value="L">Litro (L)</option>
-                                                    <option value="ml">Mililitro (ml)</option>
-                                                    <option value="un">Unidade (un)</option>
+                                                    {units.map(u => (
+                                                        <option key={u.id} value={u.symbol} className="bg-gray-900 text-white">
+                                                            {u.name} ({u.symbol})
+                                                        </option>
+                                                    ))}
                                                 </select>
                                             </div>
                                             <div>
@@ -458,6 +524,51 @@ export default function IngredientesPage() {
                     )}
                 </div>
             </main>
+
+            {/* Modal Nova Unidade */}
+            {showNewUnitModal && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#1a1a1a] rounded-2xl p-6 w-full max-w-md border border-white/10">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-white">Nova Unidade</h2>
+                            <button
+                                onClick={() => setShowNewUnitModal(false)}
+                                className="p-2 text-gray-400 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">Símbolo (ex: kg, un)</label>
+                                <input
+                                    type="text"
+                                    value={newUnitSymbol}
+                                    onChange={(e) => setNewUnitSymbol(e.target.value)}
+                                    placeholder="kg"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">Nome (ex: Quilograma)</label>
+                                <input
+                                    type="text"
+                                    value={newUnitName}
+                                    onChange={(e) => setNewUnitName(e.target.value)}
+                                    placeholder="Quilograma"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50"
+                                />
+                            </div>
+                            <button
+                                onClick={handleCreateUnit}
+                                className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl text-white font-semibold hover:from-orange-500 hover:to-orange-400 transition-all"
+                            >
+                                Criar Unidade
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

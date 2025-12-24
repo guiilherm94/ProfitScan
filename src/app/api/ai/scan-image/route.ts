@@ -1,12 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { openai, AI_MODEL, MONTHLY_SCAN_LIMIT } from '@/lib/openai'
+import { openai, MONTHLY_SCAN_LIMIT } from '@/lib/openai'
 import { compressImageServer } from '@/lib/image-compressor'
+import { GoogleGenAI } from '@google/genai'
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// Initialize Gemini
+const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY || '' })
+
+interface AIConfig {
+    currentProvider: string
+    fallbackEnabled: boolean
+    fallbackProvider: string
+}
+
+async function getAIConfig(): Promise<AIConfig> {
+    try {
+        const { data } = await supabaseAdmin
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'ai_config')
+            .single()
+
+        return data?.value || {
+            currentProvider: 'gpt5-nano',
+            fallbackEnabled: true,
+            fallbackProvider: 'gemini-2.0-flash'
+        }
+    } catch {
+        return {
+            currentProvider: 'gpt5-nano',
+            fallbackEnabled: true,
+            fallbackProvider: 'gemini-2.0-flash'
+        }
+    }
+}
+
+async function callOpenAI(systemPrompt: string, imageBase64: string): Promise<string> {
+    console.log('🤖 [AI] Usando: GPT-5 nano (OpenAI)')
+
+    const response = await openai.chat.completions.create({
+        model: 'gpt-5-nano',
+        messages: [
+            { role: 'system', content: systemPrompt },
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'image_url',
+                        image_url: {
+                            url: imageBase64.startsWith('data:')
+                                ? imageBase64
+                                : `data:image/jpeg;base64,${imageBase64}`,
+                            detail: 'low'
+                        }
+                    }
+                ]
+            }
+        ],
+        max_tokens: 2000,
+        temperature: 0.1
+    })
+
+    return response.choices[0]?.message?.content || ''
+}
+
+async function callGemini(systemPrompt: string, imageBase64: string): Promise<string> {
+    console.log('🤖 [AI] Usando: Gemini 2.0 Flash (Google)')
+
+    // Remove data URI prefix if present
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
+
+    const response = await gemini.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [
+            {
+                role: 'user',
+                parts: [
+                    { text: systemPrompt },
+                    {
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: base64Data
+                        }
+                    }
+                ]
+            }
+        ]
+    })
+
+    return response.text || ''
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -40,7 +128,6 @@ export async function POST(request: NextRequest) {
         const daysSinceReset = Math.floor((now.getTime() - resetDate.getTime()) / (1000 * 60 * 60 * 24))
 
         if (daysSinceReset >= 30) {
-            // Resetar contador
             await supabaseAdmin
                 .from('ps360_access')
                 .update({
@@ -64,7 +151,7 @@ export async function POST(request: NextRequest) {
             }, { status: 429 })
         }
 
-        // Comprimir imagem antes de enviar (economia de tokens)
+        // Comprimir imagem
         const compressedImage = await compressImageServer(image)
 
         // Definir prompt baseado no tipo
@@ -90,34 +177,44 @@ export async function POST(request: NextRequest) {
                     Retorne em formato JSON estruturado.`
         }
 
-        // Chamar GPT-5 nano Vision
-        const response = await openai.chat.completions.create({
-            model: AI_MODEL,
-            messages: [
-                {
-                    role: 'system',
-                    content: systemPrompt
-                },
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: compressedImage.startsWith('data:')
-                                    ? compressedImage
-                                    : `data:image/jpeg;base64,${compressedImage}`,
-                                detail: 'low' // Usar low detail para economizar tokens
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens: 2000,
-            temperature: 0.1 // Baixa temperatura para respostas mais precisas
-        })
+        // Buscar configuração de IA
+        const aiConfig = await getAIConfig()
+        console.log('📊 [AI Config] Provider:', aiConfig.currentProvider, '| Fallback:', aiConfig.fallbackEnabled ? aiConfig.fallbackProvider : 'desabilitado')
 
-        const result = response.choices[0]?.message?.content || ''
+        let result = ''
+        let providerUsed = aiConfig.currentProvider
+
+        // Tentar com o provider principal
+        try {
+            if (aiConfig.currentProvider === 'gemini-2.0-flash') {
+                result = await callGemini(systemPrompt, compressedImage)
+            } else {
+                result = await callOpenAI(systemPrompt, compressedImage)
+            }
+        } catch (primaryError) {
+            console.error('❌ [AI] Erro no provider principal:', primaryError)
+
+            // Tentar fallback se habilitado
+            if (aiConfig.fallbackEnabled) {
+                console.log('🔄 [AI] Tentando fallback...')
+                providerUsed = aiConfig.fallbackProvider
+
+                try {
+                    if (aiConfig.fallbackProvider === 'gemini-2.0-flash') {
+                        result = await callGemini(systemPrompt, compressedImage)
+                    } else {
+                        result = await callOpenAI(systemPrompt, compressedImage)
+                    }
+                } catch (fallbackError) {
+                    console.error('❌ [AI] Erro no fallback:', fallbackError)
+                    throw fallbackError
+                }
+            } else {
+                throw primaryError
+            }
+        }
+
+        console.log('✅ [AI] Processamento concluído com:', providerUsed)
 
         // Incrementar contador de scans
         await supabaseAdmin
@@ -130,7 +227,6 @@ export async function POST(request: NextRequest) {
         // Tentar parsear resultado como JSON
         let parsedResult
         try {
-            // Remover markdown code blocks se existirem
             const cleanResult = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
             parsedResult = JSON.parse(cleanResult)
         } catch {
@@ -140,16 +236,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: parsedResult,
+            provider_used: providerUsed,
             scans_remaining: MONTHLY_SCAN_LIMIT - (scansUsed + 1),
             scans_used: scansUsed + 1,
             scans_limit: MONTHLY_SCAN_LIMIT
         })
 
     } catch (error) {
-        console.error('Erro no scan de imagem:', error)
+        console.error('❌ [AI] Erro no scan de imagem:', error)
         return NextResponse.json(
             { error: 'Erro interno ao processar imagem' },
             { status: 500 }
         )
     }
 }
+

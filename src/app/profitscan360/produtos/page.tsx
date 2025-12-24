@@ -11,6 +11,34 @@ import {
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
 
+// Normaliza unidades da IA para símbolos conhecidos
+// Retorna null se não reconhecer (usuário precisará definir)
+function normalizeUnit(unit: string): string | null {
+    if (!unit) return null
+    const u = unit.toLowerCase().trim()
+
+    // Mapeamento de unidades comuns
+    const unitMap: Record<string, string> = {
+        'kg': 'kg', 'quilos': 'kg', 'quilogramas': 'kg', 'quilo': 'kg',
+        'g': 'g', 'gramas': 'g', 'grama': 'g',
+        'l': 'L', 'litros': 'L', 'litro': 'L',
+        'ml': 'ml', 'mililitros': 'ml', 'mililitro': 'ml',
+        'un': 'un', 'unidade': 'un', 'unidades': 'un', 'und': 'un',
+        'pç': 'un', 'peça': 'un', 'peças': 'un',
+        'm': 'm', 'metro': 'm', 'metros': 'm',
+        'cm': 'cm', 'centímetro': 'cm', 'centímetros': 'cm', 'centimetro': 'cm',
+        'mm': 'mm', 'milímetro': 'mm', 'milímetros': 'mm', 'milimetro': 'mm',
+        'dz': 'dz', 'dúzia': 'dz', 'dúzias': 'dz', 'duzia': 'dz',
+        'cx': 'cx', 'caixa': 'cx', 'caixas': 'cx',
+        'pct': 'pct', 'pacote': 'pct', 'pacotes': 'pct',
+        'xíc': 'xíc', 'xícara': 'xíc', 'xícaras': 'xíc', 'xicara': 'xíc',
+        'cs': 'cs', 'colher de sopa': 'cs', 'colheres de sopa': 'cs',
+        'cc': 'cc', 'colher de chá': 'cc', 'colheres de chá': 'cc',
+    }
+
+    return unitMap[u] || null
+}
+
 
 interface Ingredient {
     id: string
@@ -30,6 +58,7 @@ interface Tax {
 interface ProductIngredient {
     ingredient_id: string
     quantity: number
+    unit?: string
 }
 
 interface ProductComponent {
@@ -51,6 +80,14 @@ interface Product {
     real_profit: number
 }
 
+interface Unit {
+    id: string
+    user_id: string | null
+    symbol: string
+    name: string
+    is_global: boolean
+}
+
 export default function ProdutosPage() {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
@@ -69,6 +106,10 @@ export default function ProdutosPage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [showTextInput, setShowTextInput] = useState(false)
     const [recipeText, setRecipeText] = useState('')
+    const [units, setUnits] = useState<Unit[]>([])
+    const [showNewUnitModal, setShowNewUnitModal] = useState(false)
+    const [newUnitSymbol, setNewUnitSymbol] = useState('')
+    const [newUnitName, setNewUnitName] = useState('')
 
     const [form, setForm] = useState({
         name: '',
@@ -120,6 +161,10 @@ export default function ProdutosPage() {
 
             setUser(session.user)
             await fetchData()
+            // Fetch units
+            const unitsRes = await fetch(`/api/profitscan360/units?user_id=${session.user.id}`)
+            const unitsData = await unitsRes.json()
+            if (Array.isArray(unitsData)) setUnits(unitsData)
             setLoading(false)
         }
         init()
@@ -228,6 +273,7 @@ export default function ProdutosPage() {
             const formData = new FormData()
             formData.append('file', file)
             formData.append('ingredients', JSON.stringify(ingredients))
+            if (user?.id) formData.append('user_id', user.id)
 
             const res = await fetch('/api/profitscan360/extract-recipe', {
                 method: 'POST',
@@ -269,7 +315,7 @@ export default function ProdutosPage() {
                         type: 'purchased',
                         package_cost: 0,
                         package_quantity: 1,
-                        unit: ing.unit || 'g',
+                        unit: normalizeUnit(ing.unit || 'g'),
                         unit_cost: 0,
                         yield_percentage: 100,
                         user_id: user?.id
@@ -287,8 +333,15 @@ export default function ProdutosPage() {
 
             setForm(f => ({ ...f, ingredients: [...f.ingredients, ...newIngredients] }))
 
+            // Log de qual IA foi usada
+            const providerName = data.provider_used === 'gemini-2.0-flash' ? 'Gemini 2.0 Flash' : 'GPT-5 nano'
+            console.log(`🤖 IA usada: ${providerName}`)
+            console.log(`📋 Receita extraída: ${data.recipe_name} (${data.ingredients?.length || 0} ingredientes)`)
+
             if (toCreate.length > 0) {
-                alert(`${toCreate.length} ingredientes novos foram criados SEM PREÇO. Você precisa definir o custo deles em Ingredientes.`)
+                alert(`${toCreate.length} ingredientes novos foram criados SEM PREÇO. Você precisa definir o custo deles em Ingredientes.\n\n🤖 IA usada: ${providerName}`)
+            } else {
+                alert(`Receita importada com sucesso!\n\n🤖 IA usada: ${providerName}`)
             }
 
         } catch (error) {
@@ -353,7 +406,7 @@ export default function ProdutosPage() {
                         type: 'purchased',
                         package_cost: 0,
                         package_quantity: 1,
-                        unit: ing.unit || 'g',
+                        unit: normalizeUnit(ing.unit || 'g'),
                         unit_cost: 0,
                         yield_percentage: 100,
                         user_id: user?.id
@@ -535,6 +588,41 @@ export default function ProdutosPage() {
         if (!confirm('Excluir este produto?')) return
         await supabase.from('ps360_products').delete().eq('id', id)
         await fetchData()
+    }
+
+    const handleCreateUnit = async () => {
+        if (!newUnitSymbol.trim() || !newUnitName.trim()) {
+            alert('Preencha símbolo e nome da unidade')
+            return
+        }
+        if (!user) return
+
+        try {
+            const res = await fetch('/api/profitscan360/units', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    symbol: newUnitSymbol.trim(),
+                    name: newUnitName.trim()
+                })
+            })
+
+            if (res.ok) {
+                const unitsRes = await fetch(`/api/profitscan360/units?user_id=${user.id}`)
+                const unitsData = await unitsRes.json()
+                if (Array.isArray(unitsData)) setUnits(unitsData)
+                setNewUnitSymbol('')
+                setNewUnitName('')
+                setShowNewUnitModal(false)
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Erro ao criar unidade')
+            }
+        } catch (error) {
+            console.error('Erro ao criar unidade:', error)
+            alert('Erro ao criar unidade')
+        }
     }
 
     const menuItems = [
@@ -744,7 +832,16 @@ export default function ProdutosPage() {
                                         {/* Ingredientes */}
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
-                                                <label className="text-sm text-gray-400">Ingredientes</label>
+                                                <div className="flex items-center gap-4">
+                                                    <label className="text-sm text-gray-400">Ingredientes</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowNewUnitModal(true)}
+                                                        className="text-xs text-blue-400 hover:text-blue-300"
+                                                    >
+                                                        + Nova Unidade
+                                                    </button>
+                                                </div>
                                                 <button onClick={handleAddIngredient} className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1">
                                                     <Plus className="w-4 h-4" /> Adicionar
                                                 </button>
@@ -762,13 +859,22 @@ export default function ProdutosPage() {
                                                                 newIng[index].ingredient_id = e.target.value
                                                                 setForm({ ...form, ingredients: newIng })
                                                             }} className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm">
-                                                                {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
+                                                                {ingredients.map(i => <option key={i.id} value={i.id} className="bg-gray-900 text-white">{i.name}</option>)}
                                                             </select>
                                                             <input type="number" value={pi.quantity || ''} onChange={(e) => {
                                                                 const newIng = [...form.ingredients]
                                                                 newIng[index].quantity = parseFloat(e.target.value) || 0
                                                                 setForm({ ...form, ingredients: newIng })
-                                                            }} placeholder="Qtd" className="w-24 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm" />
+                                                            }} placeholder="Qtd" className="w-20 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm" />
+                                                            <select value={pi.unit || ingredients.find(i => i.id === pi.ingredient_id)?.unit || 'g'} onChange={(e) => {
+                                                                const newIng = [...form.ingredients]
+                                                                newIng[index].unit = e.target.value
+                                                                setForm({ ...form, ingredients: newIng })
+                                                            }} className="w-32 px-2 py-2 bg-gray-900 border border-white/10 rounded-lg text-white text-sm">
+                                                                {units.map(u => (
+                                                                    <option key={u.id} value={u.symbol} className="bg-gray-900 text-white">{u.name} ({u.symbol})</option>
+                                                                ))}
+                                                            </select>
                                                             <button onClick={() => handleRemoveIngredient(index)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                                                         </div>
                                                     ))}
@@ -960,6 +1066,51 @@ export default function ProdutosPage() {
                     )}
                 </div>
             </main>
+
+            {/* Modal Nova Unidade */}
+            {showNewUnitModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+                        <h3 className="text-lg font-semibold text-white mb-4">Nova Unidade</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm text-gray-400">Símbolo (ex: fo, tb)</label>
+                                <input
+                                    type="text"
+                                    value={newUnitSymbol}
+                                    onChange={(e) => setNewUnitSymbol(e.target.value)}
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                                    placeholder="Símbolo curto"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm text-gray-400">Nome completo</label>
+                                <input
+                                    type="text"
+                                    value={newUnitName}
+                                    onChange={(e) => setNewUnitName(e.target.value)}
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                                    placeholder="Ex: Folha, Tablete"
+                                />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                                <button
+                                    onClick={() => setShowNewUnitModal(false)}
+                                    className="px-4 py-2 text-gray-400 hover:text-white"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleCreateUnit}
+                                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 rounded-lg text-white font-medium"
+                                >
+                                    Criar Unidade
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
