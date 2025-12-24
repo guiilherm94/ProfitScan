@@ -156,14 +156,18 @@ export async function POST(request: NextRequest) {
             console.error('Erro ao salvar pedido:', orderError)
         }
 
-        // Liberar acesso ProfitScan 360º
+        // Liberar acesso ProfitScan 360º (1 ano de acesso)
+        const expiresAt = new Date()
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1) // Adiciona 1 ano
+
         const { error: accessError } = await supabaseAdmin
             .from('ps360_access')
             .upsert({
                 user_id: userId,
                 email: email.toLowerCase(),
                 order_id: orderRecord?.id,
-                is_active: true
+                is_active: true,
+                expires_at: expiresAt.toISOString()
             }, { onConflict: 'email' })
 
         if (accessError) {

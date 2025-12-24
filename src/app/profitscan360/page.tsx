@@ -48,6 +48,15 @@ export default function ProfitScan360Page() {
                 return
             }
 
+            // Verificar se o acesso expirou
+            if (access.expires_at) {
+                const expiresAt = new Date(access.expires_at)
+                if (expiresAt < new Date()) {
+                    window.location.href = '/profitscan360/expirado'
+                    return
+                }
+            }
+
             // Carregar estatísticas
             const [ingredients, products, expenses] = await Promise.all([
                 supabase.from('ps360_ingredients').select('id', { count: 'exact' }).eq('user_id', session.user.id),
@@ -117,8 +126,8 @@ export default function ProfitScan360Page() {
                                 <Link
                                     href={item.href}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${item.active
-                                            ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30'
-                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30'
+                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                         }`}
                                 >
                                     <item.icon className="w-5 h-5" />

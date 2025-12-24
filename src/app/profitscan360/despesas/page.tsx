@@ -52,6 +52,15 @@ export default function DespesasPage() {
 
             if (!access) { window.location.href = '/dashboard'; return }
 
+            // Verificar se o acesso expirou
+            if (access.expires_at) {
+                const expiresAt = new Date(access.expires_at)
+                if (expiresAt < new Date()) {
+                    window.location.href = '/profitscan360/expirado'
+                    return
+                }
+            }
+
             setUser(session.user)
             await fetchExpenses()
             setLoading(false)
