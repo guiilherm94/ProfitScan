@@ -22,22 +22,30 @@ interface AIConfig {
 
 async function getAIConfig(): Promise<AIConfig> {
     try {
-        const { data } = await supabaseAdmin
+        const { data, error } = await supabaseAdmin
             .from('system_settings')
             .select('value')
             .eq('key', 'ai_config')
             .single()
 
-        return data?.value || {
-            currentProvider: 'gpt5-nano',
-            fallbackEnabled: true,
-            fallbackProvider: 'gemini-2.0-flash'
+        if (error) {
+            console.log('⚠️ [AI Config] Erro ao buscar config:', error.message)
         }
-    } catch {
-        return {
-            currentProvider: 'gpt5-nano',
+
+        const config = data?.value || {
+            currentProvider: 'gemini-2.0-flash-lite',
             fallbackEnabled: true,
-            fallbackProvider: 'gemini-2.0-flash'
+            fallbackProvider: 'gpt5-nano'
+        }
+
+        console.log('📋 [AI Config] Config carregada:', JSON.stringify(config))
+        return config
+    } catch (err) {
+        console.error('❌ [AI Config] Exception:', err)
+        return {
+            currentProvider: 'gemini-2.0-flash-lite',
+            fallbackEnabled: true,
+            fallbackProvider: 'gpt5-nano'
         }
     }
 }
@@ -182,15 +190,18 @@ async function callOpenAI(prompt: string, imageBase64?: string): Promise<string>
     return content
 }
 
-// Process with Gemini
-async function callGemini(prompt: string, imageBase64?: string): Promise<string> {
-    const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
-        { text: prompt }
-    ]
+// Process with Gemini (supports multiple models) - using official documentation format
+async function callGeminiModel(prompt: string, modelId: string, imageBase64?: string): Promise<string> {
+    console.log(`🔍 [Gemini Request] Sending request to ${modelId}...`)
+
+    // Build contents following official documentation format
+    // https://ai.google.dev/gemini-api/docs/image-understanding
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contents: any[] = []
 
     if (imageBase64) {
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
-        parts.push({
+        contents.push({
             inlineData: {
                 mimeType: 'image/jpeg',
                 data: base64Data
@@ -198,12 +209,24 @@ async function callGemini(prompt: string, imageBase64?: string): Promise<string>
         })
     }
 
-    const response = await gemini.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: [{ role: 'user', parts }]
-    })
+    // Add text prompt after image
+    contents.push({ text: prompt })
 
-    return response.text || ''
+    try {
+        const response = await gemini.models.generateContent({
+            model: modelId,
+            contents: contents
+        })
+
+        const content = response.text || ''
+        console.log(`🔍 [Gemini Response] Model: ${modelId}, Content length: ${content.length}`)
+        console.log(`🔍 [Gemini Response] First 200 chars: ${content.substring(0, 200)}`)
+
+        return content
+    } catch (error) {
+        console.error(`❌ [Gemini Error] Model: ${modelId}`, error)
+        throw error
+    }
 }
 
 // Process PDF input
@@ -229,33 +252,44 @@ async function processPdfInput(buffer: Buffer, ingredientsList: string[], aiConf
     }
 }
 
+// Map provider names to Gemini model IDs (usar nomes simples como gemini-2.0-flash funciona)
+const GEMINI_MODEL_IDS: Record<string, string> = {
+    'gemini-2.0-flash': 'gemini-2.0-flash',
+    'gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
+    'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite'
+}
+
+// Helper function to call the appropriate AI model
+async function callAIModel(provider: string, prompt: string, imageBase64?: string): Promise<string> {
+    if (provider === 'gpt5-nano') {
+        return await callOpenAI(prompt, imageBase64)
+    } else if (GEMINI_MODEL_IDS[provider]) {
+        return await callGeminiModel(prompt, GEMINI_MODEL_IDS[provider], imageBase64)
+    } else {
+        // Default to GPT-5 nano if unknown provider
+        console.warn(`⚠️ Unknown provider: ${provider}, defaulting to gpt5-nano`)
+        return await callOpenAI(prompt, imageBase64)
+    }
+}
+
 // Process with fallback
 async function processWithFallback(prompt: string, imageBase64: string | undefined, aiConfig: AIConfig): Promise<{ content: string; providerUsed: string }> {
     let providerUsed = aiConfig.currentProvider
 
     try {
-        if (aiConfig.currentProvider === 'gemini-2.0-flash') {
-            const content = await callGemini(prompt, imageBase64)
-            return { content, providerUsed }
-        } else {
-            const content = await callOpenAI(prompt, imageBase64)
-            return { content, providerUsed }
-        }
+        console.log(`🚀 [Extract Recipe] Using primary provider: ${aiConfig.currentProvider}`)
+        const content = await callAIModel(aiConfig.currentProvider, prompt, imageBase64)
+        return { content, providerUsed }
     } catch (primaryError) {
         console.error('❌ [Extract Recipe] Erro no provider principal:', primaryError)
 
-        if (aiConfig.fallbackEnabled) {
-            console.log('🔄 [Extract Recipe] Tentando fallback...')
+        if (aiConfig.fallbackEnabled && aiConfig.fallbackProvider) {
+            console.log(`🔄 [Extract Recipe] Tentando fallback: ${aiConfig.fallbackProvider}`)
             providerUsed = aiConfig.fallbackProvider
 
             try {
-                if (aiConfig.fallbackProvider === 'gemini-2.0-flash') {
-                    const content = await callGemini(prompt, imageBase64)
-                    return { content, providerUsed }
-                } else {
-                    const content = await callOpenAI(prompt, imageBase64)
-                    return { content, providerUsed }
-                }
+                const content = await callAIModel(aiConfig.fallbackProvider, prompt, imageBase64)
+                return { content, providerUsed }
             } catch (fallbackError) {
                 console.error('❌ [Extract Recipe] Erro no fallback:', fallbackError)
                 throw fallbackError
@@ -332,7 +366,7 @@ export async function POST(request: NextRequest) {
             : buildPrompt(ingredientsList)
 
         // Process with selected AI
-        console.log('🤖 [Extract Recipe] Usando IA:', aiConfig.currentProvider === 'gemini-2.0-flash' ? 'Gemini 2.0 Flash' : 'GPT-5 nano')
+        console.log('🤖 [Extract Recipe] Usando IA:', aiConfig.currentProvider)
 
         const result = await processWithFallback(prompt, imageBase64, aiConfig)
 

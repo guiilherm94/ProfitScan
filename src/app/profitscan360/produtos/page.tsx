@@ -334,7 +334,13 @@ export default function ProdutosPage() {
             setForm(f => ({ ...f, ingredients: [...f.ingredients, ...newIngredients] }))
 
             // Log de qual IA foi usada
-            const providerName = data.provider_used === 'gemini-2.0-flash' ? 'Gemini 2.0 Flash' : 'GPT-5 nano'
+            const providerNames: Record<string, string> = {
+                'gpt5-nano': 'GPT-5 nano',
+                'gemini-2.0-flash': 'Gemini 2.0 Flash',
+                'gemini-2.0-flash-lite': 'Gemini 2.0 Flash-Lite',
+                'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite'
+            }
+            const providerName = providerNames[data.provider_used] || data.provider_used || 'Desconhecido'
             console.log(`🤖 IA usada: ${providerName}`)
             console.log(`📋 Receita extraída: ${data.recipe_name} (${data.ingredients?.length || 0} ingredientes)`)
 

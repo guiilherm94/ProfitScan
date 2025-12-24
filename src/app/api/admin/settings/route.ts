@@ -28,18 +28,32 @@ export async function GET() {
             fallbackProvider: config.fallbackProvider,
             availableProviders: [
                 {
+                    id: 'gemini-2.0-flash-lite',
+                    name: 'Gemini 2.0 Flash-Lite',
+                    inputCost: AI_COSTS['gemini-2.0-flash-lite'].input,
+                    outputCost: AI_COSTS['gemini-2.0-flash-lite'].output,
+                    description: '🏆 MAIS BARATO - Custo mínimo, alta velocidade'
+                },
+                {
                     id: 'gpt5-nano',
                     name: 'GPT-5 nano (OpenAI)',
                     inputCost: AI_COSTS['gpt5-nano'].input,
                     outputCost: AI_COSTS['gpt5-nano'].output,
-                    description: 'Mais barato, ótimo para tarefas simples'
+                    description: 'Boa precisão, tarefas simples'
+                },
+                {
+                    id: 'gemini-2.5-flash-lite',
+                    name: 'Gemini 2.5 Flash-Lite',
+                    inputCost: AI_COSTS['gemini-2.5-flash-lite'].input,
+                    outputCost: AI_COSTS['gemini-2.5-flash-lite'].output,
+                    description: 'Mais recente, otimizado para reasoning'
                 },
                 {
                     id: 'gemini-2.0-flash',
-                    name: 'Gemini 2.0 Flash (Google)',
+                    name: 'Gemini 2.0 Flash',
                     inputCost: AI_COSTS['gemini-2.0-flash'].input,
                     outputCost: AI_COSTS['gemini-2.0-flash'].output,
-                    description: 'Rápido e eficiente para Vision'
+                    description: 'Maior precisão, melhor para imagens complexas'
                 }
             ]
         })
@@ -51,14 +65,26 @@ export async function GET() {
             ...DEFAULT_AI_CONFIG,
             availableProviders: [
                 {
+                    id: 'gemini-2.0-flash-lite',
+                    name: 'Gemini 2.0 Flash-Lite',
+                    inputCost: AI_COSTS['gemini-2.0-flash-lite'].input,
+                    outputCost: AI_COSTS['gemini-2.0-flash-lite'].output
+                },
+                {
                     id: 'gpt5-nano',
                     name: 'GPT-5 nano (OpenAI)',
                     inputCost: AI_COSTS['gpt5-nano'].input,
                     outputCost: AI_COSTS['gpt5-nano'].output
                 },
                 {
+                    id: 'gemini-2.5-flash-lite',
+                    name: 'Gemini 2.5 Flash-Lite',
+                    inputCost: AI_COSTS['gemini-2.5-flash-lite'].input,
+                    outputCost: AI_COSTS['gemini-2.5-flash-lite'].output
+                },
+                {
                     id: 'gemini-2.0-flash',
-                    name: 'Gemini 2.0 Flash (Google)',
+                    name: 'Gemini 2.0 Flash',
                     inputCost: AI_COSTS['gemini-2.0-flash'].input,
                     outputCost: AI_COSTS['gemini-2.0-flash'].output
                 }
@@ -74,7 +100,7 @@ export async function PUT(request: NextRequest) {
         const { currentProvider, fallbackEnabled, fallbackProvider } = body
 
         // Validar provider se foi passado
-        const validProviders: AIProvider[] = ['gpt5-nano', 'gemini-2.0-flash']
+        const validProviders: AIProvider[] = ['gpt5-nano', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite']
         if (currentProvider && !validProviders.includes(currentProvider)) {
             return NextResponse.json(
                 { error: 'Provider inválido' },
