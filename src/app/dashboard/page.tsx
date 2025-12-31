@@ -184,7 +184,7 @@ export default function DashboardPage() {
                                 </Link>
                             ) : (
                                 <a
-                                    href="https://vitrinego.mycartpanda.com/checkout/profitscan360"
+                                    href="https://vitrinego.mycartpanda.com/checkout/205163175:1"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-black font-bold rounded-xl hover:opacity-90 transition-opacity"
