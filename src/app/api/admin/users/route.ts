@@ -14,23 +14,33 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '20')
         const search = searchParams.get('search') || ''
 
-        // Buscar usuários do auth.users
-        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
-            page: page,
-            perPage: limit
+        // Buscar TODOS os usuários do auth.users (sem paginação para obter total correto)
+        const { data: allAuthUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000 // Buscar até 1000 usuários
         })
 
         if (authError) throw authError
 
+        let allUsers = allAuthUsers.users || []
+
         // Filtrar por busca se necessário
-        let users = authUsers.users || []
         if (search) {
-            users = users.filter(u =>
-                u.email?.toLowerCase().includes(search.toLowerCase())
+            allUsers = allUsers.filter(u =>
+                u.email?.toLowerCase().includes(search.toLowerCase()) ||
+                u.user_metadata?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+                u.user_metadata?.name?.toLowerCase().includes(search.toLowerCase())
             )
         }
 
-        const userIds = users.map(u => u.id)
+        // Calcular paginação
+        const total = allUsers.length
+        const totalPages = Math.ceil(total / limit)
+        const startIndex = (page - 1) * limit
+        const endIndex = startIndex + limit
+        const paginatedUsers = allUsers.slice(startIndex, endIndex)
+
+        const userIds = paginatedUsers.map(u => u.id)
 
         // Buscar acessos de TODOS os produtos
         const [detectorResult, ps360Result, reputationResult] = await Promise.all([
@@ -44,7 +54,7 @@ export async function GET(request: NextRequest) {
         const reputationAccesses = reputationResult.data || []
 
         // Mapear usuários com todos os acessos
-        const usersWithAccess = users.map(user => {
+        const usersWithAccess = paginatedUsers.map(user => {
             const detector = detectorAccesses.find(a => a.user_id === user.id)
             const ps360 = ps360Accesses.find(a => a.user_id === user.id)
             const reputation = reputationAccesses.find(a => a.user_id === user.id)
@@ -66,8 +76,8 @@ export async function GET(request: NextRequest) {
             pagination: {
                 page,
                 limit,
-                total: authUsers.users?.length || 0,
-                totalPages: Math.ceil((authUsers.users?.length || 0) / limit)
+                total,
+                totalPages
             }
         })
 

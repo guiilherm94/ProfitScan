@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import {
     Zap, LogOut, Shield, Settings, Loader2,
     Calculator, Lock, ArrowRight, CheckCircle, Sparkles,
-    ShoppingBag, ExternalLink, Target, PieChart
+    ShoppingBag, ExternalLink, Target, PieChart, Crown
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -19,6 +19,7 @@ interface ModuleAccess {
 export default function DashboardPage() {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
+    const [isAdmin, setIsAdmin] = useState(false)
     const [access, setAccess] = useState<ModuleAccess>({
         profitscan360: false,
         profitscanDetector: false,
@@ -63,6 +64,15 @@ export default function DashboardPage() {
                 blindagem: !!blindagemAccess
             })
 
+            // Verificar se é admin
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_admin')
+                .eq('id', session.user.id)
+                .single()
+
+            setIsAdmin(!!profile?.is_admin)
+
             setUser(session.user)
             setLoading(false)
         }
@@ -96,6 +106,15 @@ export default function DashboardPage() {
                         <span className="text-lg font-bold text-white">ProfitScan<span className="text-[#00ff88]">AI</span></span>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-4">
+                        {isAdmin && (
+                            <Link
+                                href="/admin"
+                                className="p-2 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 hover:text-orange-300 transition-colors"
+                                title="Painel Admin"
+                            >
+                                <Crown className="w-5 h-5" />
+                            </Link>
+                        )}
                         <Link
                             href="/configuracoes"
                             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
