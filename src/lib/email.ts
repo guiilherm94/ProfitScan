@@ -1,150 +1,184 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
+import { createClient } from '@supabase/supabase-js'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-interface WelcomeEmailParams {
-    to: string
-    name: string
-    password: string
-    productName: string
-    loginUrl: string
+interface EmailSettings {
+  smtp_host: string
+  smtp_port: number
+  smtp_secure: boolean
+  smtp_user: string
+  smtp_password: string
+  from_email: string
+  from_name: string
+  is_active: boolean
 }
 
+interface EmailTemplate {
+  template_key: string
+  template_name: string
+  subject: string
+  html_content: string
+  variables: string[]
+  is_active: boolean
+}
+
+interface WelcomeEmailParams {
+  to: string
+  name: string
+  password: string
+  productName: string
+  loginUrl: string
+}
+
+// Buscar configurações SMTP do banco
+async function getEmailSettings(): Promise<EmailSettings | null> {
+  const { data, error } = await supabaseAdmin
+    .from('email_settings')
+    .select('*')
+    .single()
+
+  if (error || !data?.is_active) {
+    return null
+  }
+
+  return data as EmailSettings
+}
+
+// Buscar template por chave
+async function getEmailTemplate(templateKey: string): Promise<EmailTemplate | null> {
+  const { data, error } = await supabaseAdmin
+    .from('email_templates')
+    .select('*')
+    .eq('template_key', templateKey)
+    .eq('is_active', true)
+    .single()
+
+  if (error) {
+    return null
+  }
+
+  return data as EmailTemplate
+}
+
+// Substituir variáveis no template
+function replaceVariables(content: string, variables: Record<string, string>): string {
+  let result = content
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value)
+  }
+  return result
+}
+
+// Criar transporter SMTP
+function createTransporter(settings: EmailSettings) {
+  return nodemailer.createTransport({
+    host: settings.smtp_host,
+    port: settings.smtp_port,
+    secure: settings.smtp_secure,
+    auth: {
+      user: settings.smtp_user,
+      pass: settings.smtp_password
+    }
+  })
+}
+
+// Enviar e-mail de boas-vindas
 export async function sendWelcomeEmail({ to, name, password, productName, loginUrl }: WelcomeEmailParams) {
-    if (!process.env.RESEND_API_KEY) {
-        console.log('RESEND_API_KEY não configurada. Email não enviado.')
-        console.log(`Email que seria enviado para: ${to}`)
-        console.log(`Senha: ${password}`)
-        return { success: false, error: 'API key não configurada' }
+  try {
+    // Buscar configurações SMTP
+    const settings = await getEmailSettings()
+
+    if (!settings) {
+      console.log('SMTP não configurado ou inativo. Email não enviado.')
+      console.log(`Email que seria enviado para: ${to}`)
+      console.log(`Senha: ${password}`)
+      return { success: false, error: 'SMTP não configurado' }
     }
 
+    // Buscar template
+    const template = await getEmailTemplate('welcome')
+
+    if (!template) {
+      console.log('Template "welcome" não encontrado.')
+      return { success: false, error: 'Template não encontrado' }
+    }
+
+    // Preparar variáveis
     const firstName = name.split(' ')[0] || 'Cliente'
-
-    try {
-        const { data, error } = await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'ProfitScan AI <noreply@profitscan.ai>',
-            to: [to],
-            subject: `🎉 Seu acesso ao ${productName} está liberado!`,
-            html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px;">
-          <!-- Logo -->
-          <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <div style="display: inline-flex; align-items: center; gap: 8px;">
-                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #00ff88, #00d4ff); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                  <span style="font-size: 20px;">⚡</span>
-                </div>
-                <span style="font-size: 24px; font-weight: bold; color: white;">ProfitScan<span style="color: #00ff88;">AI</span></span>
-              </div>
-            </td>
-          </tr>
-          
-          <!-- Main Card -->
-          <tr>
-            <td>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #111111; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-                <tr>
-                  <td style="padding: 40px;">
-                    <!-- Welcome -->
-                    <h1 style="color: white; font-size: 28px; margin: 0 0 10px 0; text-align: center;">
-                      🎉 Parabéns, ${firstName}!
-                    </h1>
-                    <p style="color: #888; font-size: 16px; margin: 0 0 30px 0; text-align: center;">
-                      Seu acesso ao <strong style="color: #00ff88;">${productName}</strong> está liberado!
-                    </p>
-                    
-                    <!-- Credentials Box -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; margin-bottom: 30px;">
-                      <tr>
-                        <td style="padding: 24px;">
-                          <p style="color: #888; font-size: 14px; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 1px;">
-                            Seus dados de acesso:
-                          </p>
-                          
-                          <table width="100%" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="padding: 8px 0;">
-                                <span style="color: #666; font-size: 14px;">Email:</span>
-                              </td>
-                              <td style="padding: 8px 0; text-align: right;">
-                                <span style="color: white; font-size: 14px; font-weight: 600;">${to}</span>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding: 8px 0;">
-                                <span style="color: #666; font-size: 14px;">Senha:</span>
-                              </td>
-                              <td style="padding: 8px 0; text-align: right;">
-                                <code style="background-color: #222; color: #00ff88; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 600;">${password}</code>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                    
-                    <!-- CTA Button -->
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center">
-                          <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #00ff88, #00d4ff); color: black; font-weight: bold; font-size: 16px; padding: 16px 40px; border-radius: 12px; text-decoration: none;">
-                            ACESSAR AGORA →
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                    
-                    <!-- Security Note -->
-                    <p style="color: #666; font-size: 12px; margin: 30px 0 0 0; text-align: center;">
-                      🔒 Recomendamos que você altere sua senha após o primeiro acesso.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 30px 0; text-align: center;">
-              <p style="color: #444; font-size: 12px; margin: 0;">
-                Este email foi enviado porque você adquiriu o ${productName}.<br>
-                Se não foi você, ignore este email.
-              </p>
-              <p style="color: #333; font-size: 11px; margin: 16px 0 0 0;">
-                © 2025 ProfitScan AI. Todos os direitos reservados.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `
-        })
-
-        if (error) {
-            console.error('Erro ao enviar email:', error)
-            return { success: false, error }
-        }
-
-        console.log('Email enviado com sucesso:', data?.id)
-        return { success: true, id: data?.id }
-
-    } catch (error) {
-        console.error('Erro ao enviar email:', error)
-        return { success: false, error }
+    const variables: Record<string, string> = {
+      nome: firstName,
+      email: to,
+      senha: password,
+      produto: productName,
+      link: loginUrl
     }
+
+    // Substituir variáveis
+    const subject = replaceVariables(template.subject, variables)
+    const htmlContent = replaceVariables(template.html_content, variables)
+
+    // Criar transporter
+    const transporter = createTransporter(settings)
+
+    // Enviar e-mail
+    const info = await transporter.sendMail({
+      from: `${settings.from_name} <${settings.from_email}>`,
+      to: to,
+      subject: subject,
+      html: htmlContent
+    })
+
+    console.log('Email enviado com sucesso:', info.messageId)
+    return { success: true, id: info.messageId }
+
+  } catch (error) {
+    console.error('Erro ao enviar email:', error)
+    return { success: false, error }
+  }
+}
+
+// Enviar e-mail genérico usando template
+export async function sendTemplateEmail(
+  templateKey: string,
+  to: string,
+  variables: Record<string, string>
+) {
+  try {
+    const settings = await getEmailSettings()
+
+    if (!settings) {
+      console.log('SMTP não configurado.')
+      return { success: false, error: 'SMTP não configurado' }
+    }
+
+    const template = await getEmailTemplate(templateKey)
+
+    if (!template) {
+      console.log(`Template "${templateKey}" não encontrado.`)
+      return { success: false, error: 'Template não encontrado' }
+    }
+
+    const subject = replaceVariables(template.subject, variables)
+    const htmlContent = replaceVariables(template.html_content, variables)
+
+    const transporter = createTransporter(settings)
+
+    const info = await transporter.sendMail({
+      from: `${settings.from_name} <${settings.from_email}>`,
+      to: to,
+      subject: subject,
+      html: htmlContent
+    })
+
+    console.log('Email enviado:', info.messageId)
+    return { success: true, id: info.messageId }
+
+  } catch (error) {
+    console.error('Erro ao enviar email:', error)
+    return { success: false, error }
+  }
 }

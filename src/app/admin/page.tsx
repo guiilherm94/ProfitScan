@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import {
     Users,
@@ -15,9 +16,15 @@ import {
     ShieldOff,
     RefreshCw,
     Search,
-    ArrowLeft
+    ArrowLeft,
+    CheckSquare,
+    Square,
+    Mail,
+    Send,
+    Eye
 } from 'lucide-react'
 import Link from 'next/link'
+import EmailSettingsTab from './EmailSettingsTab'
 
 interface Stats {
     users: { total: number; activeSubscribers: number }
@@ -55,9 +62,14 @@ const supabase = createClient(
 )
 
 export default function AdminPage() {
+    const searchParams = useSearchParams()
+    const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [isAdmin, setIsAdmin] = useState(false)
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard')
+
+    // Ler aba da URL, padrão 'dashboard'
+    const tabFromUrl = searchParams.get('tab') as 'dashboard' | 'users' | 'email' | 'settings' | null
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'email' | 'settings'>(tabFromUrl || 'dashboard')
 
     // States
     const [stats, setStats] = useState<Stats | null>(null)
@@ -69,6 +81,15 @@ export default function AdminPage() {
     // Modals
     const [showCreateUser, setShowCreateUser] = useState(false)
     const [newUser, setNewUser] = useState({ email: '', password: '', name: '', grantPS360Access: true })
+
+    // Seleção múltipla
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+
+    // Função para mudar aba e atualizar URL
+    function changeTab(tab: 'dashboard' | 'users' | 'email' | 'settings') {
+        setActiveTab(tab)
+        router.push(`/admin?tab=${tab}`, { scroll: false })
+    }
 
     useEffect(() => {
         checkAdmin()
@@ -236,6 +257,68 @@ export default function AdminPage() {
         }
     }
 
+    // Funções de seleção múltipla
+    function toggleSelectUser(userId: string) {
+        setSelectedUsers(prev =>
+            prev.includes(userId)
+                ? prev.filter(id => id !== userId)
+                : [...prev, userId]
+        )
+    }
+
+    function toggleSelectAll() {
+        if (selectedUsers.length === users.length) {
+            setSelectedUsers([])
+        } else {
+            setSelectedUsers(users.map(u => u.id))
+        }
+    }
+
+    async function bulkManageAccess(product: 'detector' | 'ps360' | 'reputation', action: 'grant' | 'revoke') {
+        if (selectedUsers.length === 0) {
+            alert('Selecione pelo menos um usuário')
+            return
+        }
+
+        const productNames: Record<string, string> = {
+            'detector': 'ProfitScan Detector',
+            'ps360': 'ProfitScan 360',
+            'reputation': 'Blindagem de Reputação'
+        }
+
+        const actionText = action === 'grant' ? 'liberar' : 'revogar'
+        if (!confirm(`Deseja ${actionText} ${productNames[product]} para ${selectedUsers.length} usuário(s)?`)) {
+            return
+        }
+
+        try {
+            const res = await fetch('/api/admin/users/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_ids: selectedUsers,
+                    product,
+                    action,
+                    users_data: users.filter(u => selectedUsers.includes(u.id)).map(u => ({ id: u.id, email: u.email }))
+                })
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                alert(`Erro: ${data.error || 'Falha na operação'}`)
+                return
+            }
+
+            alert(data.message || 'Operação realizada com sucesso!')
+            setSelectedUsers([])
+            fetchUsers()
+        } catch (error) {
+            console.error('Erro ao gerenciar acessos em massa:', error)
+            alert('Erro ao conectar com o servidor')
+        }
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -257,23 +340,30 @@ export default function AdminPage() {
                         </Link>
                         <h1 className="text-xl font-bold">Painel Administrativo</h1>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <button
-                            onClick={() => setActiveTab('dashboard')}
+                            onClick={() => changeTab('dashboard')}
                             className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-orange-500 text-black' : 'bg-gray-800 text-gray-300'}`}
                         >
                             <BarChart3 className="w-4 h-4" />
                             Dashboard
                         </button>
                         <button
-                            onClick={() => setActiveTab('users')}
+                            onClick={() => changeTab('users')}
                             className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === 'users' ? 'bg-orange-500 text-black' : 'bg-gray-800 text-gray-300'}`}
                         >
                             <Users className="w-4 h-4" />
                             Usuários
                         </button>
                         <button
-                            onClick={() => setActiveTab('settings')}
+                            onClick={() => changeTab('email')}
+                            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === 'email' ? 'bg-orange-500 text-black' : 'bg-gray-800 text-gray-300'}`}
+                        >
+                            <Mail className="w-4 h-4" />
+                            E-mail
+                        </button>
+                        <button
+                            onClick={() => changeTab('settings')}
                             className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === 'settings' ? 'bg-orange-500 text-black' : 'bg-gray-800 text-gray-300'}`}
                         >
                             <Settings className="w-4 h-4" />
@@ -394,11 +484,40 @@ export default function AdminPage() {
                             </button>
                         </div>
 
+                        {/* Barra de ações em massa */}
+                        {selectedUsers.length > 0 && (
+                            <div className="flex items-center gap-4 p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+                                <span className="text-orange-400 font-medium">{selectedUsers.length} selecionado(s)</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 text-sm">Liberar:</span>
+                                    <button onClick={() => bulkManageAccess('detector', 'grant')} className="px-3 py-1 bg-green-500/20 text-green-500 text-xs rounded-lg hover:bg-green-500/30">Detector</button>
+                                    <button onClick={() => bulkManageAccess('ps360', 'grant')} className="px-3 py-1 bg-green-500/20 text-green-500 text-xs rounded-lg hover:bg-green-500/30">PS360</button>
+                                    <button onClick={() => bulkManageAccess('reputation', 'grant')} className="px-3 py-1 bg-green-500/20 text-green-500 text-xs rounded-lg hover:bg-green-500/30">Blindagem</button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 text-sm">Revogar:</span>
+                                    <button onClick={() => bulkManageAccess('detector', 'revoke')} className="px-3 py-1 bg-red-500/20 text-red-500 text-xs rounded-lg hover:bg-red-500/30">Detector</button>
+                                    <button onClick={() => bulkManageAccess('ps360', 'revoke')} className="px-3 py-1 bg-red-500/20 text-red-500 text-xs rounded-lg hover:bg-red-500/30">PS360</button>
+                                    <button onClick={() => bulkManageAccess('reputation', 'revoke')} className="px-3 py-1 bg-red-500/20 text-red-500 text-xs rounded-lg hover:bg-red-500/30">Blindagem</button>
+                                </div>
+                                <button onClick={() => setSelectedUsers([])} className="ml-auto text-gray-400 hover:text-white text-sm">Limpar seleção</button>
+                            </div>
+                        )}
+
                         {/* Tabela de usuários */}
                         <div className="bg-[#111] border border-gray-800 rounded-xl overflow-hidden overflow-x-auto">
-                            <table className="w-full min-w-[800px]">
+                            <table className="w-full min-w-[900px]">
                                 <thead className="bg-gray-900">
                                     <tr>
+                                        <th className="text-left px-3 py-3 text-sm text-gray-400 w-10">
+                                            <button onClick={toggleSelectAll} className="text-gray-400 hover:text-white">
+                                                {selectedUsers.length === users.length && users.length > 0 ? (
+                                                    <CheckSquare className="w-5 h-5 text-orange-500" />
+                                                ) : (
+                                                    <Square className="w-5 h-5" />
+                                                )}
+                                            </button>
+                                        </th>
                                         <th className="text-left px-4 py-3 text-sm text-gray-400">Usuário</th>
                                         <th className="text-center px-3 py-3 text-sm text-gray-400">Detector</th>
                                         <th className="text-center px-3 py-3 text-sm text-gray-400">PS360</th>
@@ -409,7 +528,16 @@ export default function AdminPage() {
                                 </thead>
                                 <tbody>
                                     {users.map(user => (
-                                        <tr key={user.id} className="border-t border-gray-800 hover:bg-gray-900/50">
+                                        <tr key={user.id} className={`border-t border-gray-800 hover:bg-gray-900/50 ${selectedUsers.includes(user.id) ? 'bg-orange-500/5' : ''}`}>
+                                            <td className="px-3 py-3">
+                                                <button onClick={() => toggleSelectUser(user.id)} className="text-gray-400 hover:text-white">
+                                                    {selectedUsers.includes(user.id) ? (
+                                                        <CheckSquare className="w-5 h-5 text-orange-500" />
+                                                    ) : (
+                                                        <Square className="w-5 h-5" />
+                                                    )}
+                                                </button>
+                                            </td>
                                             <td className="px-4 py-3">
                                                 <p className="font-medium">{user.name || user.email.split('@')[0]}</p>
                                                 <p className="text-sm text-gray-500">{user.email}</p>
@@ -646,6 +774,11 @@ export default function AdminPage() {
                             </label>
                         </div>
                     </div>
+                )}
+
+                {/* Email Tab */}
+                {activeTab === 'email' && (
+                    <EmailSettingsTab />
                 )}
             </main>
         </div>

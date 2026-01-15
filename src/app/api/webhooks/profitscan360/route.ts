@@ -58,10 +58,8 @@ export async function POST(request: NextRequest) {
         const body: CartPandaWebhook = await request.json()
 
         console.log('Webhook PROFITSCAN360 recebido:', body.event)
-        console.log('PS360 - Order ID:', body.order?.id)
 
         if (body.event !== 'order.paid') {
-            console.log('PS360 - Evento ignorado:', body.event)
             return NextResponse.json({ success: true, message: `Evento ${body.event} ignorado` })
         }
 
@@ -74,39 +72,23 @@ export async function POST(request: NextRequest) {
         const productName = order.line_items?.[0]?.title || 'ProfitScan 360º'
         const productId = order.line_items?.[0]?.product_id
 
-        console.log('PS360 - Dados extraídos:', { email, fullName, productName, productId })
-
         if (!email) {
-            console.log('PS360 - ERRO: Email não encontrado')
             return NextResponse.json({ error: 'Email não encontrado' }, { status: 400 })
         }
 
         // Verificar se pedido já processado
-        console.log('PS360 - Verificando pedido existente...')
-        const { data: existingOrder, error: checkError } = await supabaseAdmin
+        const { data: existingOrder } = await supabaseAdmin
             .from('orders')
             .select('id')
             .eq('cartpanda_order_id', order.id)
             .single()
 
-        if (checkError && checkError.code !== 'PGRST116') {
-            console.log('PS360 - Erro ao verificar pedido:', checkError)
-        }
-
         if (existingOrder) {
-            console.log('PS360 - Pedido já processado, ignorando:', order.id)
             return NextResponse.json({ success: true, message: 'Pedido já processado' })
         }
 
-        console.log('PS360 - Pedido novo, continuando processamento...')
-
         // Verificar/criar usuário
-        console.log('PS360 - Buscando usuários existentes...')
-        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-
-        if (listError) {
-            console.log('PS360 - Erro ao listar usuários:', listError)
-        }
+        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
         const existingUser = existingUsers?.users?.find(u => u.email === email.toLowerCase())
 
         let userId: string
@@ -115,9 +97,7 @@ export async function POST(request: NextRequest) {
 
         if (existingUser) {
             userId = existingUser.id
-            console.log('PS360 - Usuário existente encontrado:', userId)
         } else {
-            console.log('PS360 - Criando novo usuário...')
             generatedPassword = DEFAULT_PASSWORD
 
             const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -133,15 +113,14 @@ export async function POST(request: NextRequest) {
             })
 
             if (createError) {
-                console.error('PS360 - Erro ao criar usuário:', createError)
+                console.error('Erro ao criar usuário:', createError)
                 return NextResponse.json({ error: 'Erro ao criar usuário' }, { status: 500 })
             }
 
             userId = createData.user.id
             isNewUser = true
-            console.log(`PS360 - NOVO USUÁRIO CRIADO: ${email} | ID: ${userId}`)
+            console.log(`NOVO USUÁRIO PROFITSCAN360: ${email}`)
 
-            console.log('PS360 - Enviando email de boas-vindas...')
             const loginUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profitscan.ai'
             try {
                 await sendWelcomeEmail({
@@ -151,15 +130,12 @@ export async function POST(request: NextRequest) {
                     productName: productName,
                     loginUrl: loginUrl
                 })
-                console.log('PS360 - Email de boas-vindas enviado para:', email)
             } catch (emailError) {
-                console.error('PS360 - Erro ao enviar email:', emailError)
-                // Continua mesmo se falhar o email
+                console.error('Erro ao enviar email:', emailError)
             }
         }
 
         // Salvar pedido
-        console.log('PS360 - Salvando pedido...')
         const { data: orderRecord, error: orderError } = await supabaseAdmin
             .from('orders')
             .insert({
@@ -180,17 +156,13 @@ export async function POST(request: NextRequest) {
             .single()
 
         if (orderError) {
-            console.error('PS360 - Erro ao salvar pedido:', orderError)
+            console.error('Erro ao salvar pedido:', orderError)
             return NextResponse.json({ error: 'Erro ao salvar pedido' }, { status: 500 })
         }
 
-        console.log('PS360 - Pedido salvo com sucesso, ID:', orderRecord.id)
-
         // Liberar acesso ProfitScan 360º (1 ano de acesso)
         const expiresAt = new Date()
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1) // Adiciona 1 ano
-
-        console.log(`PS360 - Liberando acesso para: ${email}, user_id: ${userId}, order_id: ${orderRecord.id}`)
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1)
 
         const { error: accessError } = await supabaseAdmin
             .from('ps360_access')
@@ -204,8 +176,6 @@ export async function POST(request: NextRequest) {
 
         if (accessError) {
             console.error('Erro ao liberar PS360:', accessError)
-            console.error('Detalhes do erro:', JSON.stringify(accessError, null, 2))
-            // Não retorna erro aqui para não perder o pedido, mas loga detalhadamente
         }
 
         console.log(`PROFITSCAN 360º liberado para: ${email}`)
