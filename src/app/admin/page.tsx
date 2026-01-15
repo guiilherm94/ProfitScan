@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import {
@@ -61,7 +61,7 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export default function AdminPage() {
+function AdminPageContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const [loading, setLoading] = useState(true)
@@ -782,5 +782,17 @@ export default function AdminPage() {
                 )}
             </main>
         </div>
+    )
+}
+
+export default function AdminPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500" />
+            </div>
+        }>
+            <AdminPageContent />
+        </Suspense>
     )
 }
