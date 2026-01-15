@@ -93,7 +93,7 @@ export default function EntregavelPage() {
 
                     {/* Botão de Login */}
                     <Link
-                        href="/login"
+                        href="https://www.profitscan.online/"
                         className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg shadow-green-500/25"
                     >
                         <LogIn className="w-5 h-5" />
